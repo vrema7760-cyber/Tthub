@@ -2,80 +2,512 @@ const INDEX_HTML = `<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d0714">
 <title>🎃 HalloweenTok</title>
 <style>
   :root {
     --bg: #0d0714;
+    --bg-gradient: linear-gradient(135deg, #0d0714 0%, #1a0f26 100%);
     --card: #1a0f26;
+    --card-hover: #231538;
     --orange: #ff7518;
+    --orange-glow: rgba(255, 117, 24, 0.4);
     --purple: #7b2ff7;
+    --purple-glow: rgba(123, 47, 247, 0.4);
     --green: #6dff8f;
     --text: #f3e9ff;
+    --text-dim: #a89bb8;
+    --border: #2a1a3a;
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --shadow-hover: 0 12px 48px rgba(123, 47, 247, 0.3);
   }
-  * { box-sizing: border-box; }
+  
+  * { 
+    box-sizing: border-box; 
+    margin: 0;
+    padding: 0;
+  }
+  
+  *::before, *::after {
+    box-sizing: border-box;
+  }
+  
   body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background-image:
-      radial-gradient(circle at 20% 10%, rgba(123,47,247,0.25), transparent 40%),
-      radial-gradient(circle at 80% 90%, rgba(255,117,24,0.2), transparent 40%);
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
   }
+  
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 10%, var(--purple-glow), transparent 40%),
+      radial-gradient(circle at 80% 90%, var(--orange-glow), transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  /* Header */
   header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 16px; border-bottom: 1px solid #2a1a3a; position: sticky; top: 0;
-    background: rgba(13,7,20,0.9); backdrop-filter: blur(6px); z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(13, 7, 20, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
-  header h1 { font-size: 20px; margin: 0; color: var(--orange); text-shadow: 0 0 8px rgba(255,117,24,0.6); }
+  
+  header h1 {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--orange);
+    text-shadow: 0 0 20px var(--orange-glow);
+    white-space: nowrap;
+    letter-spacing: -0.5px;
+  }
+  
   header input {
-    background: var(--card); border: 1px solid var(--purple); color: var(--text);
-    border-radius: 20px; padding: 6px 14px; width: 40%;
+    flex: 1;
+    max-width: 300px;
+    background: var(--card);
+    border: 2px solid var(--border);
+    color: var(--text);
+    border-radius: 24px;
+    padding: 10px 18px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    outline: none;
   }
+  
+  header input:focus {
+    border-color: var(--purple);
+    box-shadow: 0 0 0 3px var(--purple-glow);
+  }
+  
+  header input::placeholder {
+    color: var(--text-dim);
+  }
+  
+  #authArea {
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Buttons */
   button, .btn {
     background: linear-gradient(135deg, var(--purple), var(--orange));
-    border: none; color: white; padding: 8px 16px; border-radius: 20px;
-    cursor: pointer; font-weight: 600;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 24px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(123, 47, 247, 0.3);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
   }
-  #feed { max-width: 480px; margin: 0 auto; padding: 12px; }
+  
+  button:hover, .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(123, 47, 247, 0.5);
+  }
+  
+  button:active, .btn:active {
+    transform: translateY(0);
+  }
+  
+  /* Feed */
+  #feed {
+    max-width: 540px;
+    margin: 0 auto;
+    padding: 20px 16px 100px;
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Cards */
   .card {
-    background: var(--card); border: 1px solid #2a1a3a; border-radius: 16px;
-    margin-bottom: 16px; overflow: hidden;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    margin-bottom: 24px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.5s ease;
   }
-  .card video, .card img { width: 100%; display: block; background: black; max-height: 640px; object-fit: contain; }
-  .card-body { padding: 10px 14px; }
-  .author { font-weight: 600; color: var(--orange); }
-  .actions { display: flex; gap: 16px; padding: 8px 14px; }
-  .actions span { cursor: pointer; }
-  .comments { padding: 0 14px 10px; font-size: 14px; opacity: 0.9; }
-  .comment-input { display: flex; gap: 6px; padding: 0 14px 12px; }
-  .comment-input input { flex: 1; border-radius: 12px; border: 1px solid var(--purple); background: #120a1c; color: var(--text); padding: 6px 10px; }
+  
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
+    border-color: var(--purple);
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .card video, .card img {
+    width: 100%;
+    display: block;
+    background: black;
+    max-height: 640px;
+    object-fit: contain;
+  }
+  
+  .card-body {
+    padding: 16px 20px;
+  }
+  
+  .author {
+    font-weight: 700;
+    color: var(--orange);
+    font-size: 15px;
+    display: block;
+    margin-bottom: 6px;
+  }
+  
+  .card-body div:last-child {
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  /* Actions */
+  .actions {
+    display: flex;
+    gap: 20px;
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .actions span {
+    cursor: pointer;
+    font-size: 15px;
+    transition: all 0.2s ease;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .actions span:hover {
+    transform: scale(1.1);
+  }
+  
+  .actions span:active {
+    transform: scale(0.95);
+  }
+  
+  /* Comments */
+  .comments {
+    padding: 12px 20px;
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+  
+  .comments div {
+    padding: 6px 0;
+    line-height: 1.5;
+  }
+  
+  .comments b {
+    color: var(--orange);
+    font-weight: 600;
+  }
+  
+  .comment-input {
+    display: flex;
+    gap: 8px;
+    padding: 12px 20px 16px;
+  }
+  
+  .comment-input input {
+    flex: 1;
+    border-radius: 20px;
+    border: 2px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    padding: 10px 16px;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.3s ease;
+  }
+  
+  .comment-input input:focus {
+    border-color: var(--purple);
+    box-shadow: 0 0 0 3px var(--purple-glow);
+  }
+  
+  /* Upload Modal */
   #uploadModal {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none;
-    align-items: center; justify-content: center; z-index: 50;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
   }
-  #uploadModal .box { background: var(--card); padding: 20px; border-radius: 16px; width: 90%; max-width: 420px; }
-  #progressLog { font-size: 12px; opacity: 0.8; max-height: 120px; overflow-y: auto; margin-top: 8px; }
-  .fab { position: fixed; bottom: 20px; right: 20px; font-size: 28px; padding: 14px 18px; border-radius: 50%; }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  #uploadModal .box {
+    background: var(--card);
+    padding: 28px;
+    border-radius: 24px;
+    width: 100%;
+    max-width: 440px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-hover);
+    animation: slideUp 0.3s ease;
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  #uploadModal h3 {
+    color: var(--orange);
+    margin-bottom: 20px;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  
+  #uploadModal input[type="file"] {
+    width: 100%;
+    padding: 12px;
+    background: var(--bg);
+    border: 2px dashed var(--purple);
+    border-radius: 16px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  #uploadModal input[type="file"]:hover {
+    border-color: var(--orange);
+    background: var(--card-hover);
+  }
+  
+  #uploadModal input[type="text"] {
+    width: 100%;
+    margin-top: 12px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    border: 2px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: all 0.3s ease;
+  }
+  
+  #uploadModal input[type="text"]:focus {
+    border-color: var(--purple);
+    box-shadow: 0 0 0 3px var(--purple-glow);
+  }
+  
+  #uploadModal button {
+    margin-top: 16px;
+    width: 100%;
+  }
+  
+  #progressLog {
+    font-size: 13px;
+    color: var(--text-dim);
+    max-height: 150px;
+    overflow-y: auto;
+    margin-top: 16px;
+    padding: 12px;
+    background: var(--bg);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  
+  #progressLog div {
+    padding: 4px 0;
+    animation: fadeIn 0.3s ease;
+  }
+  
+  /* FAB */
+  .fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    font-size: 32px;
+    padding: 16px 20px;
+    border-radius: 50%;
+    box-shadow: 0 8px 32px rgba(255, 117, 24, 0.5);
+    z-index: 50;
+    transition: all 0.3s ease;
+  }
+  
+  .fab:hover {
+    transform: scale(1.1) rotate(10deg);
+    box-shadow: 0 12px 40px rgba(255, 117, 24, 0.7);
+  }
+  
+  /* Mobile Optimizations */
+  @media (max-width: 640px) {
+    header {
+      padding: 12px 16px;
+      flex-wrap: wrap;
+    }
+    
+    header h1 {
+      font-size: 20px;
+      order: 1;
+    }
+    
+    #authArea {
+      order: 2;
+      margin-left: auto;
+    }
+    
+    header input {
+      order: 3;
+      width: 100%;
+      max-width: 100%;
+      margin-top: 10px;
+    }
+    
+    #feed {
+      padding: 16px 12px 100px;
+    }
+    
+    .card {
+      margin-bottom: 20px;
+      border-radius: 16px;
+    }
+    
+    .card-body {
+      padding: 14px 16px;
+    }
+    
+    .actions {
+      padding: 12px 16px;
+      gap: 16px;
+    }
+    
+    .comments {
+      padding: 12px 16px;
+    }
+    
+    .comment-input {
+      padding: 12px 16px 16px;
+    }
+    
+    .fab {
+      bottom: 20px;
+      right: 20px;
+      font-size: 28px;
+      padding: 14px 18px;
+    }
+    
+    #uploadModal .box {
+      padding: 24px 20px;
+    }
+  }
+  
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: var(--purple);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--orange);
+  }
+  
+  /* Loading state */
+  .loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-dim);
+  }
+  
+  .loading::after {
+    content: '🎃';
+    display: inline-block;
+    animation: spin 2s linear infinite;
+  }
+  
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
 </style>
 </head>
 <body>
 <header>
   <h1>🎃 HalloweenTok</h1>
-  <input id="searchInput" placeholder="Поиск жутких видео...">
+  <input id="searchInput" placeholder="🔍 Поиск жутких видео...">
   <div id="authArea"></div>
 </header>
 
 <div id="feed"></div>
-<button class="fab" onclick="openUploadModal()">👻+</button>
+<button class="fab" onclick="openUploadModal()" title="Загрузить">👻</button>
 
 <div id="uploadModal">
   <div class="box">
-    <h3>Загрузить видео/фото</h3>
+    <h3>👻 Загрузить контент</h3>
     <input type="file" id="fileInput" accept="video/*,image/*">
-    <input type="text" id="captionInput" placeholder="Подпись..." style="width:100%;margin-top:8px;padding:6px;border-radius:8px;border:1px solid var(--purple);background:#120a1c;color:var(--text);">
-    <div style="margin-top:10px;display:flex;gap:8px;">
-      <button onclick="startUpload()">Сжать и загрузить</button>
-      <button onclick="closeUploadModal()" style="background:#333;">Отмена</button>
+    <input type="text" id="captionInput" placeholder="✨ Подпись к контенту...">
+    <div style="margin-top:16px;display:flex;gap:10px;">
+      <button onclick="startUpload()" style="flex:1;">🚀 Загрузить</button>
+      <button onclick="closeUploadModal()" style="flex:1;background:#333;">❌ Отмена</button>
     </div>
     <div id="progressLog"></div>
   </div>
@@ -91,21 +523,27 @@ function log(msg) {
   el.scrollTop = el.scrollHeight;
 }
 
-function openUploadModal() { document.getElementById('uploadModal').style.display = 'flex'; }
-function closeUploadModal() { document.getElementById('uploadModal').style.display = 'none'; document.getElementById('progressLog').innerHTML = ''; }
+function openUploadModal() { 
+  document.getElementById('uploadModal').style.display = 'flex'; 
+}
 
-// ---------- Лестница сжатия фото ----------
+function closeUploadModal() { 
+  document.getElementById('uploadModal').style.display = 'none'; 
+  document.getElementById('progressLog').innerHTML = ''; 
+}
+
+// ---------- Сжатие фото ----------
 async function compressPhoto(file) {
   const img = await loadImage(file);
   let quality = 0.85, maxDim = 1280;
   for (let attempt = 0; attempt < 8; attempt++) {
     const blob = await drawAndExport(img, maxDim, quality);
-    log('Фото: ' + maxDim + 'px, качество ' + quality.toFixed(2) + ' → ' + (blob.size/1024).toFixed(0) + 'KB');
+    log('📸 Фото: ' + maxDim + 'px, качество ' + quality.toFixed(2) + ' → ' + (blob.size/1024).toFixed(0) + 'KB');
     if (blob.size <= MAX_PHOTO_BYTES) return blob;
     quality -= 0.15;
     if (quality < 0.35) { quality = 0.85; maxDim = Math.floor(maxDim * 0.75); }
   }
-  return await drawAndExport(img, 480, 0.4); // финальный фолбэк
+  return await drawAndExport(img, 480, 0.4);
 }
 
 function loadImage(file) {
@@ -129,18 +567,15 @@ function drawAndExport(img, maxDim, quality) {
   });
 }
 
-// ---------- Лестница сжатия видео ----------
-// Схема: разрешение 720p -> 480p; для каждого разрешения битрейт 800 -> 400 -> 100 kbps.
-// Т.к. в Worker нет ffmpeg, перекодируем в браузере: рисуем кадры видео на canvas
-// нужного разрешения и записываем через MediaRecorder с заданным videoBitsPerSecond.
+// ---------- Сжатие видео ----------
 const RES_LADDER = [720, 480];
-const BITRATE_LADDER = [800, 400, 100]; // kbps
+const BITRATE_LADDER = [800, 400, 100];
 
 async function compressVideo(file) {
   const video = await loadVideo(file);
   for (const targetHeight of RES_LADDER) {
     for (const kbps of BITRATE_LADDER) {
-      log('Видео: пробую ' + targetHeight + 'p @ ' + kbps + 'kbps...');
+      log('🎬 Видео: пробую ' + targetHeight + 'p @ ' + kbps + 'kbps...');
       const blob = await recodeVideo(video, targetHeight, kbps * 1000);
       log('  → получилось ' + (blob.size/1024/1024).toFixed(2) + 'MB');
       if (blob.size <= MAX_VIDEO_BYTES) {
@@ -148,7 +583,6 @@ async function compressVideo(file) {
       }
     }
   }
-  // Финальный фолбэк — самое агрессивное сжатие из лестницы
   const blob = await recodeVideo(video, 480, 100000);
   return { blob, resolution: '480p', bitrate_kbps: 100 };
 }
@@ -214,7 +648,7 @@ async function startUpload() {
 
   if (isVideo) {
     const { blob, resolution, bitrate_kbps } = await compressVideo(file);
-    if (blob.size > MAX_VIDEO_BYTES) log('⚠️ Не удалось уложиться в 3MB даже на минимальном профиле, грузим как есть.');
+    if (blob.size > MAX_VIDEO_BYTES) log('⚠️ Не удалось уложиться в 3MB, грузим как есть.');
     payload = {
       type: 'video', mime: blob.type, base64: await blobToBase64(blob),
       caption, resolution, bitrate_kbps,
@@ -224,12 +658,12 @@ async function startUpload() {
     payload = { type: 'photo', mime: 'image/jpeg', base64: await blobToBase64(blob), caption };
   }
 
-  log('Загружаю на сервер...');
+  log('🚀 Загружаю на сервер...');
   const res = await fetch('/api/upload', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   });
   const data = await res.json();
-  if (data.error) { log('Ошибка: ' + data.error); return; }
+  if (data.error) { log('❌ Ошибка: ' + data.error); return; }
   log('✅ Готово!');
   closeUploadModal();
   loadFeed();
@@ -237,12 +671,24 @@ async function startUpload() {
 
 // ---------- Лента ----------
 async function loadFeed() {
-  const res = await fetch('/api/feed');
-  const data = await res.json();
   const feed = document.getElementById('feed');
-  feed.innerHTML = '';
-  for (const item of data.items) {
-    feed.appendChild(renderCard(item));
+  feed.innerHTML = '<div class="loading">Загружаю ленту...</div>';
+  
+  try {
+    const res = await fetch('/api/feed');
+    const data = await res.json();
+    feed.innerHTML = '';
+    
+    if (!data.items || data.items.length === 0) {
+      feed.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-dim);">👻 Пока пусто. Будь первым, кто загрузит контент!</div>';
+      return;
+    }
+    
+    for (const item of data.items) {
+      feed.appendChild(renderCard(item));
+    }
+  } catch (err) {
+    feed.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--orange);">❌ Ошибка загрузки</div>';
   }
 }
 
@@ -250,12 +696,12 @@ function renderCard(item) {
   const div = document.createElement('div');
   div.className = 'card';
   const media = item.type === 'video'
-    ? '<video src="/api/media/' + item.id + '/content" controls loop></video>'
-    : '<img src="/api/media/' + item.id + '/content">';
+    ? '<video src="/api/media/' + item.id + '/content" controls loop playsinline></video>'
+    : '<img src="/api/media/' + item.id + '/content" loading="lazy">';
   div.innerHTML = \`
     \${media}
     <div class="card-body">
-      <span class="author">\${item.author_name}</span>
+      <span class="author">@\${item.author_name}</span>
       <div>\${item.caption || ''}</div>
     </div>
     <div class="actions">
@@ -275,12 +721,12 @@ function renderCard(item) {
 async function toggleLike(id, el) {
   const res = await fetch('/api/media/' + id + '/like', { method: 'POST' });
   const data = await res.json();
-  el.textContent = (data.liked ? '❤️‍🔥 ' : '❤️ ') + (data.liked ? '+1' : '');
-  loadFeed();
+  el.textContent = (data.liked ? '❤️‍🔥 ' : '❤️ ') + data.likes_count;
 }
 
 async function toggleSave(id, el) {
   await fetch('/api/media/' + id + '/save', { method: 'POST' });
+  const res = await fetch('/api/media/' + id + '/content');
   loadFeed();
 }
 
@@ -289,7 +735,11 @@ async function loadComments(mediaId) {
   const data = await res.json();
   const el = document.getElementById('comments-' + mediaId);
   if (!el) return;
-  el.innerHTML = data.items.map(c => '<div><b>' + c.author_name + ':</b> ' + c.text + '</div>').join('');
+  if (!data.items || data.items.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-dim);font-style:italic;">Пока нет комментариев...</div>';
+    return;
+  }
+  el.innerHTML = data.items.map(c => '<div><b>@' + c.author_name + ':</b> ' + c.text + '</div>').join('');
 }
 
 async function sendComment(mediaId, input) {
@@ -310,6 +760,10 @@ document.getElementById('searchInput').addEventListener('input', debounce(async 
   const data = await res.json();
   const feed = document.getElementById('feed');
   feed.innerHTML = '';
+  if (!data.media || data.media.length === 0) {
+    feed.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-dim);">🔍 Ничего не найдено</div>';
+    return;
+  }
   for (const item of data.media) feed.appendChild(renderCard(item));
 }, 400));
 
@@ -318,7 +772,7 @@ function debounce(fn, ms) {
 }
 
 // ---------- Auth ----------
-document.getElementById('authArea').innerHTML = '<a class="btn" href="/auth/google">Войти через Google</a>';
+document.getElementById('authArea').innerHTML = '<a class="btn" href="/auth/github">🐙 Войти через GitHub</a>';
 
 loadFeed();
 </script>
