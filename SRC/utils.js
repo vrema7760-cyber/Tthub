@@ -27,3 +27,12 @@ export async function requireUser(request, env) {
   ).bind(token, Date.now()).first();
   return row || null;
 }
+
+export async function getCurrentUser(request, env) {
+  const token = getCookie(request, 'session');
+  if (!token) return null;
+  const row = await env.DB.prepare(
+    'SELECT users.* FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token = ? AND sessions.expires_at > ?'
+  ).bind(token, Date.now()).first();
+  return row || null;
+}
