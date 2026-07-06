@@ -1,5 +1,5 @@
 name = "halloweentok"
-main = "SCR/index.js"
+main = "SRC/index.js"
 compatibility_date = "2026-01-01"
 
 [[d1_databases]]
