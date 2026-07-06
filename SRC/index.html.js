@@ -9,16 +9,22 @@ const INDEX_HTML = `<!DOCTYPE html>
   :root {
     --bg: #0d0714;
     --card: #1a0f26;
+    --card-hover: #231538;
     --orange: #ff7518;
+    --orange-glow: rgba(255,117,24,0.4);
     --purple: #7b2ff7;
+    --purple-glow: rgba(123,47,247,0.4);
     --green: #6dff8f;
     --red: #ff4444;
     --text: #f3e9ff;
     --text-dim: #a89bb8;
     --border: #2a1a3a;
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+    --shadow-hover: 0 12px 48px rgba(123,47,247,0.3);
   }
   
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  *::before, *::after { box-sizing: border-box; }
   
   body {
     background: var(--bg);
@@ -26,7 +32,8 @@ const INDEX_HTML = `<!DOCTYPE html>
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
-    cursor: pointer;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
   }
   
   body::before {
@@ -34,9 +41,10 @@ const INDEX_HTML = `<!DOCTYPE html>
     position: fixed;
     inset: 0;
     background: 
-      radial-gradient(circle at 20% 10%, rgba(123,47,247,0.3), transparent 40%),
-      radial-gradient(circle at 80% 90%, rgba(255,117,24,0.25), transparent 40%);
+      radial-gradient(circle at 20% 10%, var(--purple-glow), transparent 40%),
+      radial-gradient(circle at 80% 90%, var(--orange-glow), transparent 40%);
     pointer-events: none;
+    z-index: 0;
     animation: bgPulse 8s ease-in-out infinite;
   }
   
@@ -78,21 +86,24 @@ const INDEX_HTML = `<!DOCTYPE html>
     gap: 12px;
     padding: 16px 20px;
     border-bottom: 2px solid var(--purple);
-    background: rgba(13,7,20,0.98);
-    backdrop-filter: blur(16px);
     position: sticky;
     top: 0;
+    background: rgba(13,7,20,0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     z-index: 100;
-    box-shadow: 0 4px 32px rgba(123,47,247,0.4);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
   }
   
   header h1 {
-    font-size: 26px;
-    font-weight: 900;
+    font-size: 24px;
+    font-weight: 800;
     background: linear-gradient(135deg, var(--orange), var(--purple));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-shadow: 0 0 30px rgba(255,117,24,0.6);
+    text-shadow: 0 0 20px var(--orange-glow);
+    white-space: nowrap;
+    letter-spacing: -0.5px;
     animation: titleGlow 3s ease-in-out infinite;
   }
   
@@ -110,14 +121,18 @@ const INDEX_HTML = `<!DOCTYPE html>
     border-radius: 24px;
     padding: 10px 18px;
     font-size: 14px;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
     outline: none;
   }
   
   header input:focus {
-    border-color: var(--orange);
-    box-shadow: 0 0 0 4px rgba(255,117,24,0.3);
+    border-color: var(--purple);
+    box-shadow: 0 0 0 3px var(--purple-glow);
   }
+  
+  header input::placeholder { color: var(--text-dim); }
+  
+  #authArea { display: flex; align-items: center; gap: 8px; }
   
   button, .btn {
     background: linear-gradient(135deg, var(--purple), var(--orange));
@@ -126,42 +141,50 @@ const INDEX_HTML = `<!DOCTYPE html>
     padding: 10px 20px;
     border-radius: 24px;
     cursor: pointer;
-    font-weight: 700;
+    font-weight: 600;
     font-size: 14px;
-    transition: all 0.3s;
-    box-shadow: 0 4px 20px rgba(123,47,247,0.4);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(123,47,247,0.3);
     text-decoration: none;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
   }
   
   button:hover, .btn:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 8px 32px rgba(255,117,24,0.6);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(123,47,247,0.5);
   }
   
-  button:active { transform: scale(0.95); }
+  button:active, .btn:active { transform: translateY(0); }
   
-  .btn-danger {
-    background: linear-gradient(135deg, #ff4444, #ff7518);
+  .btn-logout {
+    background: #333;
+    padding: 8px 14px;
+    font-size: 12px;
   }
   
   #feed {
     max-width: 540px;
     margin: 0 auto;
     padding: 20px 16px 100px;
+    position: relative;
+    z-index: 1;
   }
   
   .card {
     background: var(--card);
-    border: 2px solid var(--border);
+    border: 1px solid var(--border);
     border-radius: 20px;
     margin-bottom: 24px;
     overflow: hidden;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    animation: cardEnter 0.6s cubic-bezier(0.34,1.56,0.64,1);
-    transition: all 0.3s;
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.5s ease;
     position: relative;
   }
   
@@ -172,21 +195,23 @@ const INDEX_HTML = `<!DOCTYPE html>
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-    transition: left 0.5s;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+    transition: left 0.6s;
+    pointer-events: none;
+    z-index: 1;
   }
   
   .card:hover::before { left: 100%; }
   
-  @keyframes cardEnter {
-    from { opacity: 0; transform: translateY(40px) scale(0.9); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
   }
   
   .card:hover {
-    transform: translateY(-6px) scale(1.02);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
     border-color: var(--purple);
-    box-shadow: 0 16px 48px rgba(123,47,247,0.5);
   }
   
   .card video, .card img {
@@ -200,35 +225,42 @@ const INDEX_HTML = `<!DOCTYPE html>
   .card-body { padding: 16px 20px; }
   
   .author {
-    font-weight: 800;
+    font-weight: 700;
     color: var(--orange);
-    font-size: 16px;
+    font-size: 15px;
     display: block;
     margin-bottom: 6px;
+  }
+  
+  .card-body div:last-child {
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1.5;
   }
   
   .actions {
     display: flex;
     gap: 20px;
-    padding: 14px 20px;
+    padding: 12px 20px;
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
   }
   
   .actions span {
     cursor: pointer;
-    font-size: 20px;
-    transition: all 0.2s;
+    font-size: 15px;
+    transition: all 0.2s ease;
+    user-select: none;
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-weight: 600;
+    gap: 4px;
   }
   
   .actions span:hover {
-    transform: scale(1.2) rotate(10deg);
-    filter: drop-shadow(0 0 12px currentColor);
+    transform: scale(1.1);
   }
+  
+  .actions span:active { transform: scale(0.95); }
   
   .actions span.liked {
     color: var(--red);
@@ -241,9 +273,14 @@ const INDEX_HTML = `<!DOCTYPE html>
     100% { transform: scale(1); }
   }
   
-  .comments { padding: 12px 20px; font-size: 14px; color: var(--text-dim); }
-  .comments div { padding: 6px 0; }
-  .comments b { color: var(--orange); }
+  .comments {
+    padding: 12px 20px;
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+  
+  .comments div { padding: 6px 0; line-height: 1.5; }
+  .comments b { color: var(--orange); font-weight: 600; }
   
   .comment-input {
     display: flex;
@@ -258,13 +295,14 @@ const INDEX_HTML = `<!DOCTYPE html>
     background: var(--bg);
     color: var(--text);
     padding: 10px 16px;
+    font-size: 14px;
     outline: none;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
   }
   
   .comment-input input:focus {
     border-color: var(--purple);
-    box-shadow: 0 0 0 3px rgba(123,47,247,0.3);
+    box-shadow: 0 0 0 3px var(--purple-glow);
   }
   
   .delete-btn {
@@ -283,6 +321,7 @@ const INDEX_HTML = `<!DOCTYPE html>
     opacity: 0;
     transition: all 0.3s;
     backdrop-filter: blur(8px);
+    box-shadow: 0 4px 16px rgba(255,68,68,0.4);
   }
   
   .card:hover .delete-btn { opacity: 1; }
@@ -297,11 +336,12 @@ const INDEX_HTML = `<!DOCTYPE html>
     position: fixed;
     bottom: 24px;
     right: 24px;
-    font-size: 36px;
-    padding: 18px 22px;
+    font-size: 32px;
+    padding: 16px 20px;
     border-radius: 50%;
-    box-shadow: 0 8px 40px rgba(255,117,24,0.6);
+    box-shadow: 0 8px 32px rgba(255,117,24,0.5);
     z-index: 50;
+    transition: all 0.3s ease;
     animation: fabFloat 3s ease-in-out infinite;
   }
   
@@ -312,141 +352,160 @@ const INDEX_HTML = `<!DOCTYPE html>
   
   .fab:hover {
     animation: none;
-    transform: scale(1.15) rotate(15deg);
+    transform: scale(1.1) rotate(10deg);
+    box-shadow: 0 12px 40px rgba(255,117,24,0.7);
   }
   
   #uploadModal {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.95);
+    background: rgba(0,0,0,0.9);
     display: none;
     align-items: center;
     justify-content: center;
     z-index: 200;
     padding: 20px;
+    animation: fadeIn 0.3s ease;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
   
   #uploadModal .box {
     background: var(--card);
-    padding: 32px;
-    border-radius: 28px;
+    padding: 28px;
+    border-radius: 24px;
     width: 100%;
-    max-width: 480px;
-    border: 2px solid var(--purple);
-    box-shadow: 0 16px 64px rgba(123,47,247,0.6);
-    animation: modalSlide 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    max-width: 440px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-hover);
+    animation: slideUp 0.3s ease;
   }
   
-  @keyframes modalSlide {
-    from { opacity: 0; transform: translateY(50px) scale(0.9); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
   }
   
   #uploadModal h3 {
     color: var(--orange);
-    margin-bottom: 24px;
-    font-size: 26px;
-    font-weight: 900;
+    margin-bottom: 20px;
+    font-size: 22px;
+    font-weight: 700;
   }
   
   #uploadModal input[type="file"] {
     width: 100%;
-    padding: 16px;
+    padding: 12px;
     background: var(--bg);
-    border: 3px dashed var(--purple);
+    border: 2px dashed var(--purple);
     border-radius: 16px;
     color: var(--text);
     cursor: pointer;
-    transition: all 0.3s;
-    font-size: 15px;
+    transition: all 0.3s ease;
   }
   
   #uploadModal input[type="file"]:hover {
     border-color: var(--orange);
-    background: rgba(255,117,24,0.1);
+    background: var(--card-hover);
   }
   
   #uploadModal input[type="text"] {
     width: 100%;
-    margin-top: 16px;
-    padding: 14px 18px;
+    margin-top: 12px;
+    padding: 12px 16px;
     border-radius: 16px;
     border: 2px solid var(--border);
     background: var(--bg);
     color: var(--text);
-    font-size: 15px;
+    font-size: 14px;
     outline: none;
+    transition: all 0.3s ease;
   }
   
   #uploadModal input[type="text"]:focus {
     border-color: var(--purple);
-    box-shadow: 0 0 0 4px rgba(123,47,247,0.3);
+    box-shadow: 0 0 0 3px var(--purple-glow);
   }
+  
+  #uploadModal button { margin-top: 16px; width: 100%; }
   
   #progressLog {
     font-size: 13px;
     color: var(--text-dim);
-    max-height: 180px;
+    max-height: 150px;
     overflow-y: auto;
-    margin-top: 20px;
-    padding: 16px;
+    margin-top: 16px;
+    padding: 12px;
     background: var(--bg);
     border-radius: 12px;
     border: 1px solid var(--border);
   }
   
   #progressLog div {
-    padding: 6px 0;
-    animation: fadeIn 0.3s;
+    padding: 4px 0;
+    animation: fadeIn 0.3s ease;
   }
+  
+  @media (max-width: 640px) {
+    header { padding: 12px 16px; flex-wrap: wrap; }
+    header h1 { font-size: 20px; order: 1; }
+    #authArea { order: 2; margin-left: auto; }
+    header input { order: 3; width: 100%; max-width: 100%; margin-top: 10px; }
+    #feed { padding: 16px 12px 100px; }
+    .card { margin-bottom: 20px; border-radius: 16px; }
+    .card-body { padding: 14px 16px; }
+    .actions { padding: 12px 16px; gap: 16px; }
+    .comments { padding: 12px 16px; }
+    .comment-input { padding: 12px 16px 16px; }
+    .fab { bottom: 20px; right: 20px; font-size: 28px; padding: 14px 18px; }
+    #uploadModal .box { padding: 24px 20px; }
+    .delete-btn { opacity: 1; }
+  }
+  
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--purple); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--orange); }
   
   .loading {
     text-align: center;
-    padding: 60px 20px;
+    padding: 40px;
     color: var(--text-dim);
-    font-size: 18px;
   }
   
   .loading::after {
     content: '🎃';
     display: inline-block;
-    animation: spin 1.5s linear infinite;
-    margin-left: 12px;
+    animation: spin 2s linear infinite;
   }
   
   @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
   }
-  
-  @media (max-width: 640px) {
-    header { flex-wrap: wrap; padding: 12px 16px; }
-    header h1 { font-size: 22px; order: 1; }
-    #authArea { order: 2; margin-left: auto; }
-    header input { order: 3; width: 100%; margin-top: 10px; }
-    #feed { padding: 16px 12px 100px; }
-    .delete-btn { opacity: 1; }
-  }
 </style>
 </head>
 <body>
 <header>
   <h1>🎃 HalloweenTok</h1>
-  <input id="searchInput" placeholder="🔍 Поиск...">
+  <input id="searchInput" placeholder="🔍 Поиск жутких видео...">
   <div id="authArea"></div>
 </header>
 
 <div id="feed"></div>
-<button class="fab" onclick="openUploadModal()">👻</button>
+<button class="fab" onclick="openUploadModal()" title="Загрузить">👻</button>
 
 <div id="uploadModal">
   <div class="box">
-    <h3>👻 Загрузить</h3>
+    <h3>👻 Загрузить контент</h3>
     <input type="file" id="fileInput" accept="video/*,image/*">
-    <input type="text" id="captionInput" placeholder="Подпись...">
-    <div style="margin-top:20px;display:flex;gap:12px;">
+    <input type="text" id="captionInput" placeholder="✨ Подпись к контенту...">
+    <div style="margin-top:16px;display:flex;gap:10px;">
       <button onclick="startUpload()" style="flex:1;">🚀 Загрузить</button>
-      <button onclick="closeUploadModal()" style="flex:1;background:#333;">✕</button>
+      <button onclick="closeUploadModal()" style="flex:1;background:#333;">❌ Отмена</button>
     </div>
     <div id="progressLog"></div>
   </div>
@@ -456,7 +515,7 @@ const INDEX_HTML = `<!DOCTYPE html>
 const MAX_VIDEO_BYTES = 3 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 0.5 * 1024 * 1024;
 const ADMIN_NICK = 'vrema7760-cyber';
-const HALLOWEEN_EMOJIS = ['🎃','','🦇','️','💀','','✨','💜',''];
+const HALLOWEEN_EMOJIS = ['','👻','🦇','️','💀','🧟','✨','💜','🧡'];
 const PARTICLE_COLORS = ['#ff7518','#7b2ff7','#6dff8f','#ff1493','#00ffff'];
 
 const COMPRESS_LADDER = [
@@ -521,9 +580,7 @@ async function compressPhoto(file) {
 async function compressVideo(file) {
   const video = await loadVideo(file);
   const duration = video.duration || 10;
-  
   log('🎬 Оригинал: ' + (file.size/1024/1024).toFixed(2) + 'MB, ' + duration.toFixed(1) + 'с');
-  
   for (let i = 0; i < COMPRESS_LADDER.length; i++) {
     const step = COMPRESS_LADDER[i];
     log('🎬 ' + step.height + 'p @ ' + step.fps + 'fps @ ' + step.kbps + 'kbps...');
@@ -533,7 +590,6 @@ async function compressVideo(file) {
       return { blob, resolution: step.height + 'p', fps: step.fps, bitrate_kbps: step.kbps };
     }
   }
-  
   const last = COMPRESS_LADDER[COMPRESS_LADDER.length - 1];
   const blob = await recodeVideo(video, last.height, last.fps, last.kbps * 1000);
   return { blob, resolution: last.height + 'p', fps: last.fps, bitrate_kbps: last.kbps };
@@ -566,21 +622,17 @@ function recodeVideo(video, height, fps, videoBitsPerSecond) {
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = height;
     const ctx = canvas.getContext('2d');
-    
     const stream = canvas.captureStream(fps);
     const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
     const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond });
     const chunks = [];
     rec.ondataavailable = e => { if(e.data.size>0) chunks.push(e.data); };
     rec.onstop = () => resolve(new Blob(chunks, {type:mime}));
-    
     video.currentTime = 0;
     await video.play();
     rec.start();
-    
     let lastFrame = 0;
     const frameInterval = 1000 / fps;
-    
     function draw(now) {
       if(video.paused || video.ended) { rec.stop(); return; }
       if(now - lastFrame >= frameInterval) {
@@ -606,21 +658,18 @@ async function startUpload() {
   const file = document.getElementById('fileInput').files[0];
   const caption = document.getElementById('captionInput').value;
   if(!file) return alert('Выбери файл');
-
-  log('🚀 Начинаю сжатие...');
+  log(' Начинаю сжатие...');
   const isVideo = file.type.startsWith('video/');
   let payload;
-
   if(isVideo) {
-    const blob = await compressVideo(file);
-    payload = { type:'video', mime:blob.type, base64:await blobToBase64(blob), caption, resolution:blob.resolution, fps:blob.fps, bitrate_kbps:blob.bitrate_kbps };
+    const { blob, resolution, fps, bitrate_kbps } = await compressVideo(file);
+    payload = { type:'video', mime:blob.type, base64:await blobToBase64(blob), caption, resolution, fps, bitrate_kbps };
     log('✅ Видео сжато: ' + (blob.size/1024/1024).toFixed(2) + 'MB');
   } else {
     const blob = await compressPhoto(file);
     payload = { type:'photo', mime:'image/jpeg', base64:await blobToBase64(blob), caption };
     log('✅ Фото сжато: ' + (blob.size/1024).toFixed(0) + 'KB');
   }
-
   log('📤 Загрузка...');
   const res = await fetch('/api/upload', {
     method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
@@ -634,35 +683,29 @@ async function startUpload() {
 
 async function loadFeed() {
   const feed = document.getElementById('feed');
-  feed.innerHTML = '<div class="loading">Загрузка</div>';
-  
+  feed.innerHTML = '<div class="loading">Загружаю ленту...</div>';
   try {
     const res = await fetch('/api/feed');
     const data = await res.json();
     feed.innerHTML = '';
-    
     if(!data.items || data.items.length === 0) {
-      feed.innerHTML = '<div style="text-align:center;padding:80px 20px;color:var(--text-dim);font-size:18px;">👻 Пусто...<br>Будь первым!</div>';
+      feed.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-dim);">👻 Пока пусто. Будь первым, кто загрузит контент!</div>';
       return;
     }
-    
     for(const item of data.items) feed.appendChild(renderCard(item));
   } catch(e) {
-    feed.innerHTML = '<div style="text-align:center;padding:60px;color:var(--red);">Ошибка загрузки</div>';
+    feed.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--red);">❌ Ошибка загрузки</div>';
   }
 }
 
 function renderCard(item) {
   const div = document.createElement('div');
   div.className = 'card';
-  
   const isOwner = currentUser && (item.author_name === currentUser || item.author_name === ADMIN_NICK);
-  const deleteBtn = isOwner ? '<button class="delete-btn" onclick="event.stopPropagation();deleteMedia(\\\'' + item.id + '\\\')">🗑️</button>' : '';
-  
+  const deleteBtn = isOwner ? '<button class="delete-btn" onclick="event.stopPropagation();deleteMedia(\\\'' + item.id + '\\\')">🗑️ Удалить</button>' : '';
   const media = item.type === 'video' 
     ? '<video src="/api/media/' + item.id + '/content" controls loop playsinline></video>'
     : '<img src="/api/media/' + item.id + '/content" loading="lazy">';
-  
   div.innerHTML = \`
     \${deleteBtn}
     \${media}
@@ -677,10 +720,9 @@ function renderCard(item) {
     </div>
     <div class="comments" id="comments-\${item.id}"></div>
     <div class="comment-input">
-      <input placeholder="Коммент..." onkeydown="event.stopPropagation();if(event.key==='Enter')sendComment('\${item.id}',this)">
+      <input placeholder="Оставь жуткий коммент..." onkeydown="event.stopPropagation();if(event.key==='Enter')sendComment('\${item.id}',this)">
     </div>
   \`;
-  
   loadComments(item.id);
   return div;
 }
@@ -705,13 +747,8 @@ async function toggleSave(id, el) {
 async function deleteMedia(id) {
   if(!confirm('Удалить это видео?')) return;
   const res = await fetch('/api/media/' + id, {method:'DELETE'});
-  if(res.ok) {
-    log('✅ Удалено');
-    loadFeed();
-  } else {
-    const data = await res.json();
-    alert('Ошибка: ' + (data.error || 'неизвестная'));
-  }
+  if(res.ok) { loadFeed(); }
+  else { const data = await res.json(); alert('Ошибка: ' + (data.error || 'неизвестная')); }
 }
 
 async function loadComments(mediaId) {
@@ -720,7 +757,7 @@ async function loadComments(mediaId) {
   const el = document.getElementById('comments-' + mediaId);
   if(!el) return;
   if(!data.items || data.items.length === 0) {
-    el.innerHTML = '<div style="color:var(--text-dim);font-style:italic;">Нет комментариев</div>';
+    el.innerHTML = '<div style="color:var(--text-dim);font-style:italic;">Пока нет комментариев...</div>';
     return;
   }
   el.innerHTML = data.items.map(c => '<div><b>@' + c.author_name + ':</b> ' + c.text + '</div>').join('');
@@ -744,7 +781,7 @@ document.getElementById('searchInput').addEventListener('input', debounce(async 
   const feed = document.getElementById('feed');
   feed.innerHTML = '';
   if(!data.media || data.media.length === 0) {
-    feed.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-dim);">Ничего не найдено</div>';
+    feed.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-dim);"> Ничего не найдено</div>';
     return;
   }
   for(const item of data.media) feed.appendChild(renderCard(item));
@@ -754,9 +791,30 @@ function debounce(fn, ms) {
   let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }
 
-document.getElementById('authArea').innerHTML = '<a class="btn" href="/auth/github">🐙 Войти</a>';
+async function initAuth() {
+  try {
+    const res = await fetch('/api/me');
+    if(res.ok) {
+      const user = await res.json();
+      currentUser = user.name;
+      document.getElementById('authArea').innerHTML = 
+        '<span style="color:var(--orange);font-weight:700;font-size:14px;">👤 @' + user.name + '</span>' +
+        '<button class="btn-logout" onclick="logout()">Выйти</button>';
+    } else {
+      document.getElementById('authArea').innerHTML = '<a class="btn" href="/auth/github"> Войти</a>';
+    }
+  } catch(e) {
+    document.getElementById('authArea').innerHTML = '<a class="btn" href="/auth/github">🐙 Войти</a>';
+  }
+  loadFeed();
+}
 
-loadFeed();
+function logout() {
+  document.cookie = 'session=; Max-Age=0; path=/';
+  location.reload();
+}
+
+initAuth();
 </script>
 </body>
 </html>`;
