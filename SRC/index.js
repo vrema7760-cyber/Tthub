@@ -11,16 +11,16 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
-    const redirectUri = `${url.origin}/auth/google/callback`;
+    const redirectUri = `${url.origin}/auth/github/callback`;
 
     try {
       // --- Auth ---
       if (path === '/auth/github') {
-  return githubLoginRedirect(env, redirectUri);
-}
-if (path === '/auth/github/callback') {
-  return githubCallback(request, env, redirectUri);
-}
+        return githubLoginRedirect(env, redirectUri);
+      }
+      if (path === '/auth/github/callback') {
+        return githubCallback(request, env, redirectUri);
+      }
 
       // --- Media ---
       if (path === '/api/upload' && request.method === 'POST') return handleUpload(request, env);
