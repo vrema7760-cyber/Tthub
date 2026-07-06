@@ -1,5 +1,5 @@
 import { json } from './utils.js';
-import { googleLoginRedirect, googleCallback } from './auth.js';
+import { githubLoginRedirect, githubCallback } from './auth.js';
 import { handleUpload, handleFeed, handleMediaContent } from './media.js';
 import { handleLike, handleSave, handleComment, handleListComments } from './social.js';
 import {
@@ -15,8 +15,12 @@ export default {
 
     try {
       // --- Auth ---
-      if (path === '/auth/google') return googleLoginRedirect(env, redirectUri);
-      if (path === '/auth/google/callback') return googleCallback(request, env, redirectUri);
+      if (path === '/auth/github') {
+  return githubLoginRedirect(env, redirectUri);
+}
+if (path === '/auth/github/callback') {
+  return githubCallback(request, env, redirectUri);
+}
 
       // --- Media ---
       if (path === '/api/upload' && request.method === 'POST') return handleUpload(request, env);
