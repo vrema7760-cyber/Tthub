@@ -1,8 +1,9 @@
 import { json, uuid, requireUser } from './utils.js';
 import { pickShardForWrite, storeBlobInShard, fetchBlobFromShard, bumpShardUsage } from './shards.js';
 
-const MAX_VIDEO_BYTES = 3 * 1024 * 1024; // 3MB — финальный лимит после клиентской лестницы сжатия
-const MAX_PHOTO_BYTES = 0.5 * 1024 * 1024; // 0.5MB
+const MAX_VIDEO_BYTES = 3 * 1024 * 1024;
+const MAX_PHOTO_BYTES = 0.5 * 1024 * 1024;
+const ADMIN_NICK = 'vrema7760-cyber';
 
 export async function handleUpload(request, env) {
   const user = await requireUser(request, env);
@@ -14,13 +15,12 @@ export async function handleUpload(request, env) {
   if (!['video', 'photo'].includes(type)) return json({ error: 'bad_type' }, 400);
   if (!base64) return json({ error: 'missing_data' }, 400);
 
-  // Примерный размер из base64 (длина * 3/4)
   const approxBytes = Math.ceil((base64.length * 3) / 4);
   const limit = type === 'video' ? MAX_VIDEO_BYTES : MAX_PHOTO_BYTES;
   if (approxBytes > limit) {
     return json({
       error: 'too_large',
-      detail: `Файл ${approxBytes} байт превышает лимит ${limit} байт. Клиент должен был сжать сильнее по лестнице качества.`,
+      detail: `Файл ${approxBytes} байт превышает лимит ${limit} байт`,
     }, 413);
   }
 
@@ -50,7 +50,7 @@ export async function handleFeed(request, env) {
   const { results } = await env.DB.prepare(
     `SELECT media.*, users.name as author_name, users.avatar_url as author_avatar
      FROM media JOIN users ON users.id = media.user_id
-     WHERE media.created_at < ?
+     WHERE media.created_at < ? AND media.deleted_at IS NULL
      ORDER BY media.created_at DESC LIMIT ?`
   ).bind(cursor, limit).all();
 
@@ -61,11 +61,32 @@ export async function handleFeed(request, env) {
 }
 
 export async function handleMediaContent(request, env, mediaId) {
-  const media = await env.DB.prepare('SELECT * FROM media WHERE id = ?').bind(mediaId).first();
+  const media = await env.DB.prepare('SELECT * FROM media WHERE id = ? AND deleted_at IS NULL').bind(mediaId).first();
   if (!media) return json({ error: 'not_found' }, 404);
 
   const shard = await env.DB.prepare('SELECT * FROM shards WHERE id = ?').bind(media.shard_id).first();
   const res = await fetchBlobFromShard(env, shard, media.blob_key);
   if (!res) return json({ error: 'blob_missing' }, 404);
   return res;
+}
+
+export async function handleDeleteMedia(request, env, mediaId) {
+  const user = await requireUser(request, env);
+  if (!user) return json({ error: 'unauthorized' }, 401);
+
+  const media = await env.DB.prepare('SELECT * FROM media WHERE id = ?').bind(mediaId).first();
+  if (!media) return json({ error: 'not_found' }, 404);
+  if (media.deleted_at) return json({ error: 'already_deleted' }, 400);
+
+  const isAdmin = user.name === ADMIN_NICK;
+  const isOwner = media.user_id === user.id;
+
+  if (!isAdmin && !isOwner) {
+    return json({ error: 'forbidden' }, 403);
+  }
+
+  await env.DB.prepare('UPDATE media SET deleted_at = ? WHERE id = ?')
+    .bind(Date.now(), mediaId).run();
+
+  return json({ ok: true, deleted: true });
 }
