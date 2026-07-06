@@ -108,6 +108,8 @@ const INDEX_HTML = `<!DOCTYPE html>
     -webkit-text-fill-color: transparent;
     white-space: nowrap;
     animation: titleGlow 3s ease-in-out infinite;
+    cursor: pointer;
+    user-select: none;
   }
   
   @keyframes titleGlow {
@@ -153,6 +155,8 @@ const INDEX_HTML = `<!DOCTYPE html>
     align-items: center;
     gap: 6px;
     white-space: nowrap;
+    position: relative;
+    overflow: hidden;
   }
   
   button:hover, .btn:hover {
@@ -230,6 +234,8 @@ const INDEX_HTML = `<!DOCTYPE html>
     object-fit: contain;
     position: relative;
     z-index: 1;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
   }
   
   .card-body { padding: 16px 20px; position: relative; z-index: 1; }
@@ -272,6 +278,7 @@ const INDEX_HTML = `<!DOCTYPE html>
     color: var(--text);
     font-weight: 600;
     box-shadow: none;
+    border: none;
   }
   
   .action-btn:hover {
@@ -279,7 +286,15 @@ const INDEX_HTML = `<!DOCTYPE html>
     transform: scale(1.1);
   }
   
-  .action-btn:active { transform: scale(0.9); }
+  .action-btn:active { 
+    transform: scale(0.9);
+    animation: clickRipple 0.4s ease;
+  }
+  
+  @keyframes clickRipple {
+    0% { box-shadow: 0 0 0 0 rgba(255,117,24,0.7); }
+    100% { box-shadow: 0 0 0 20px rgba(255,117,24,0); }
+  }
   
   .action-btn.liked {
     animation: likePulse 0.4s ease;
@@ -493,6 +508,33 @@ const INDEX_HTML = `<!DOCTYPE html>
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
   }
+  
+  .easter-egg-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.5s ease;
+  }
+  
+  .easter-egg-content {
+    text-align: center;
+    font-size: 48px;
+    animation: easterEggPop 1s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  
+  @keyframes easterEggPop {
+    from { transform: scale(0) rotate(-180deg); }
+    to { transform: scale(1) rotate(0deg); }
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 </style>
 </head>
 <body>
@@ -500,7 +542,7 @@ const INDEX_HTML = `<!DOCTYPE html>
 <div id="particleLayer"></div>
 
 <header>
-  <h1>HalloweenTok</h1>
+  <h1 id="siteTitle">HalloweenTok</h1>
   <input id="searchInput" placeholder="Поиск...">
   <div id="authArea"><span style="color:var(--text-dim)">...</span></div>
 </header>
@@ -585,6 +627,10 @@ function closeUploadModal() { document.getElementById('uploadModal').style.displ
 
 // ========== COMPRESS ==========
 async function compressPhoto(file) {
+  if (file.size <= MAX_PHOTO_BYTES) {
+    log('Фото уже влезает, пропускаю сжатие');
+    return file;
+  }
   const img = await loadImage(file);
   const canvas = document.createElement('canvas');
   const scale = Math.min(1, 1080 / Math.max(img.width, img.height));
@@ -595,6 +641,10 @@ async function compressPhoto(file) {
 }
 
 async function compressVideo(file) {
+  if (file.size <= MAX_VIDEO_BYTES) {
+    log('Видео уже влезает, пропускаю сжатие');
+    return { blob: file, resolution: 'original', fps: 30, bitrate_kbps: Math.round(file.size * 8 / (file.duration || 10) / 1000) };
+  }
   const video = await loadVideo(file);
   const duration = video.duration || 10;
   log('Оригинал: ' + (file.size/1024/1024).toFixed(2) + 'MB, ' + duration.toFixed(1) + 'с');
@@ -839,6 +889,48 @@ async function init() {
 function logout() {
   document.cookie = 'session=; Max-Age=0; path=/';
   location.reload();
+}
+
+// ========== EASTER EGGS ==========
+let clickCount = 0;
+let lastClickTime = 0;
+const konamiCode = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+let konamiIndex = 0;
+
+document.getElementById('siteTitle').addEventListener('click', function() {
+  clickCount++;
+  const now = Date.now();
+  if (now - lastClickTime > 2000) clickCount = 1;
+  lastClickTime = now;
+  
+  if (clickCount === 5) {
+    showEasterEgg('🎃', 'Секретный режим активирован!');
+    document.body.style.filter = 'hue-rotate(180deg)';
+    setTimeout(() => document.body.style.filter = '', 5000);
+  }
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === konamiCode[konamiIndex]) {
+    konamiIndex++;
+    if (konamiIndex === konamiCode.length) {
+      showEasterEgg('👻', 'Konami Code! +100 жизней!');
+      for (let i = 0; i < 50; i++) {
+        setTimeout(() => spawnParticles(Math.random() * window.innerWidth, Math.random() * window.innerHeight), i * 50);
+      }
+      konamiIndex = 0;
+    }
+  } else {
+    konamiIndex = 0;
+  }
+});
+
+function showEasterEgg(emoji, text) {
+  const overlay = document.createElement('div');
+  overlay.className = 'easter-egg-overlay';
+  overlay.innerHTML = '<div class="easter-egg-content">' + emoji + '<br><span style="font-size:24px;">' + text + '</span></div>';
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.remove(), 3000);
 }
 
 init();
