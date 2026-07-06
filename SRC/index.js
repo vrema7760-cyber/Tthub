@@ -1,4 +1,5 @@
 import { json } from './utils.js';
+import { getCurrentUser } from './utils.js';
 import { githubLoginRedirect, githubCallback } from './auth.js';
 import { handleUpload, handleFeed, handleMediaContent, handleDeleteMedia } from './media.js';
 import { handleLike, handleSave, handleComment, handleListComments } from './social.js';
@@ -11,7 +12,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
-    const redirectUri = \`\${url.origin}/auth/github/callback\`;
+    const redirectUri = `${url.origin}/auth/github/callback`;
 
     try {
       // --- Auth ---
@@ -22,24 +23,31 @@ export default {
         return githubCallback(request, env, redirectUri);
       }
 
+      // --- User ---
+      if (path === '/api/me' && request.method === 'GET') {
+        const user = await getCurrentUser(request, env);
+        if (!user) return json({ error: 'unauthorized' }, 401);
+        return json(user);
+      }
+
       // --- Media ---
       if (path === '/api/upload' && request.method === 'POST') return handleUpload(request, env);
       if (path === '/api/feed' && request.method === 'GET') return handleFeed(request, env);
 
       let m;
-      if ((m = path.match(/^\\/api\\/media\\/([\\w-]+)\\/content\$/)) && request.method === 'GET') {
+      if ((m = path.match(/^\/api\/media\/([\w-]+)\/content$/)) && request.method === 'GET') {
         return handleMediaContent(request, env, m[1]);
       }
-      if ((m = path.match(/^\\/api\\/media\\/([\\w-]+)\$/)) && request.method === 'DELETE') {
+      if ((m = path.match(/^\/api\/media\/([\w-]+)$/)) && request.method === 'DELETE') {
         return handleDeleteMedia(request, env, m[1]);
       }
-      if ((m = path.match(/^\\/api\\/media\\/([\\w-]+)\\/like\$/)) && request.method === 'POST') {
+      if ((m = path.match(/^\/api\/media\/([\w-]+)\/like$/)) && request.method === 'POST') {
         return handleLike(request, env, m[1]);
       }
-      if ((m = path.match(/^\\/api\\/media\\/([\\w-]+)\\/save\$/)) && request.method === 'POST') {
+      if ((m = path.match(/^\/api\/media\/([\w-]+)\/save$/)) && request.method === 'POST') {
         return handleSave(request, env, m[1]);
       }
-      if ((m = path.match(/^\\/api\\/media\\/([\\w-]+)\\/comments\$/))) {
+      if ((m = path.match(/^\/api\/media\/([\w-]+)\/comments$/))) {
         if (request.method === 'POST') return handleComment(request, env, m[1]);
         if (request.method === 'GET') return handleListComments(request, env, m[1]);
       }
@@ -50,7 +58,7 @@ export default {
       // --- Chat ---
       if (path === '/api/chats' && request.method === 'GET') return handleListChats(request, env);
       if (path === '/api/chats/open' && request.method === 'POST') return handleOpenChat(request, env);
-      if ((m = path.match(/^\\/api\\/chats\\/([\\w-]+)\\/messages\$/))) {
+      if ((m = path.match(/^\/api\/chats\/([\w-]+)\/messages$/))) {
         if (request.method === 'POST') return handleSendMessage(request, env, m[1]);
         if (request.method === 'GET') return handleGetMessages(request, env, m[1]);
       }
