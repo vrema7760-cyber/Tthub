@@ -5,7 +5,7 @@ compatibility_date = "2026-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "halloweentok-main-db"
-database_id = "REPLACE_WITH_YOUR_D1_ID"
+database_id = "aca5dca1-2ccd-4874-a8a9-b2e8ca62053a"
 
 # Service binding на первый шард-воркер (склад блобов).
 # Добавляй новые [[services]] блоки при деплое shard-worker-2, shard-worker-3 и т.д.
