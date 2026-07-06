@@ -1,0 +1,19 @@
+name = "halloweentok"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "halloweentok-main-db"
+database_id = "REPLACE_WITH_YOUR_D1_ID"
+
+# Service binding на первый шард-воркер (склад блобов).
+# Добавляй новые [[services]] блоки при деплое shard-worker-2, shard-worker-3 и т.д.
+[[services]]
+binding = "SHARD_1"
+service = "halloweentok-shard-1"
+
+[vars]
+GOOGLE_CLIENT_ID = "REPLACE_WITH_GOOGLE_CLIENT_ID"
+GOOGLE_CLIENT_SECRET = "REPLACE_WITH_GOOGLE_CLIENT_SECRET"
+INTERNAL_SECRET = "REPLACE_WITH_SAME_SECRET_AS_SHARD_WORKERS"
