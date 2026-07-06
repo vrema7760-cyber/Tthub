@@ -1,11 +1,11 @@
 name = "halloweentok-shard-1"
-main = "src/index.js"
+main = "SRC/index.js"
 compatibility_date = "2026-01-01"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "halloweentok-shard-1-db"
-database_id = "REPLACE_WITH_YOUR_D1_ID"
+database_id = "2d0a498c-10c4-4972-9c3e-216b56a31438"
 
 [vars]
 INTERNAL_SECRET = "REPLACE_WITH_LONG_RANDOM_SECRET"
