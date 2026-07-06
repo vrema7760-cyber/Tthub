@@ -4,7 +4,7 @@ const INDEX_HTML = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0d0714">
-<title>🎃 HalloweenTok</title>
+<title>HalloweenTok</title>
 <style>
   :root {
     --bg: #0d0714;
@@ -19,12 +19,9 @@ const INDEX_HTML = `<!DOCTYPE html>
     --text: #f3e9ff;
     --text-dim: #a89bb8;
     --border: #2a1a3a;
-    --shadow: 0 8px 32px rgba(0,0,0,0.4);
-    --shadow-hover: 0 12px 48px rgba(123,47,247,0.3);
   }
   
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  *::before, *::after { box-sizing: border-box; }
   
   body {
     background: var(--bg);
@@ -34,6 +31,7 @@ const INDEX_HTML = `<!DOCTYPE html>
     overflow-x: hidden;
     position: relative;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   
   body::before {
@@ -53,30 +51,37 @@ const INDEX_HTML = `<!DOCTYPE html>
     50% { opacity: 0.7; }
   }
   
-  .particle {
+  #particleLayer {
     position: fixed;
+    inset: 0;
     pointer-events: none;
     z-index: 9999;
-    animation: particleFloat 1.2s ease-out forwards;
+    overflow: hidden;
+  }
+  
+  .particle {
+    position: absolute;
+    pointer-events: none;
+    border-radius: 50%;
+    animation: particleFly 1s ease-out forwards;
   }
   
   .emoji-particle {
-    position: fixed;
+    position: absolute;
     pointer-events: none;
-    z-index: 9998;
     font-size: 28px;
-    animation: emojiFloat 1.8s ease-out forwards;
+    animation: emojiFly 1.5s ease-out forwards;
   }
   
-  @keyframes particleFloat {
-    0% { opacity: 1; transform: translate(0,0) scale(1) rotate(0deg); }
-    100% { opacity: 0; transform: translate(var(--tx),var(--ty)) scale(0) rotate(360deg); }
+  @keyframes particleFly {
+    0% { opacity: 1; transform: translate(0,0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0); }
   }
   
-  @keyframes emojiFloat {
-    0% { opacity: 1; transform: translate(0,0) scale(0) rotate(0deg); }
-    20% { transform: translate(0,0) scale(1.8) rotate(72deg); }
-    100% { opacity: 0; transform: translate(var(--tx),calc(var(--ty) - 120px)) scale(0.3) rotate(360deg); }
+  @keyframes emojiFly {
+    0% { opacity: 1; transform: translate(0,0) scale(0.5) rotate(0deg); }
+    30% { opacity: 1; transform: translate(calc(var(--dx)*0.3), calc(var(--dy)*0.3)) scale(1.5) rotate(90deg); }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.2) rotate(360deg); }
   }
   
   header {
@@ -101,15 +106,13 @@ const INDEX_HTML = `<!DOCTYPE html>
     background: linear-gradient(135deg, var(--orange), var(--purple));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-shadow: 0 0 20px var(--orange-glow);
     white-space: nowrap;
-    letter-spacing: -0.5px;
     animation: titleGlow 3s ease-in-out infinite;
   }
   
   @keyframes titleGlow {
-    0%, 100% { filter: brightness(1); }
-    50% { filter: brightness(1.3); }
+    0%, 100% { filter: brightness(1) drop-shadow(0 0 8px var(--orange-glow)); }
+    50% { filter: brightness(1.3) drop-shadow(0 0 16px var(--orange-glow)); }
   }
   
   header input {
@@ -121,7 +124,7 @@ const INDEX_HTML = `<!DOCTYPE html>
     border-radius: 24px;
     padding: 10px 18px;
     font-size: 14px;
-    transition: all 0.3s ease;
+    transition: all 0.3s;
     outline: none;
   }
   
@@ -143,16 +146,13 @@ const INDEX_HTML = `<!DOCTYPE html>
     cursor: pointer;
     font-weight: 600;
     font-size: 14px;
-    transition: all 0.3s ease;
+    transition: all 0.3s;
     box-shadow: 0 4px 16px rgba(123,47,247,0.3);
     text-decoration: none;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
     gap: 6px;
     white-space: nowrap;
-    position: relative;
-    overflow: hidden;
   }
   
   button:hover, .btn:hover {
@@ -160,12 +160,23 @@ const INDEX_HTML = `<!DOCTYPE html>
     box-shadow: 0 6px 24px rgba(123,47,247,0.5);
   }
   
-  button:active, .btn:active { transform: translateY(0); }
+  button:active, .btn:active { transform: scale(0.95); }
   
   .btn-logout {
-    background: #333;
+    background: linear-gradient(135deg, #444, #333);
     padding: 8px 14px;
     font-size: 12px;
+    box-shadow: none;
+  }
+  
+  .user-badge {
+    color: var(--orange);
+    font-weight: 700;
+    font-size: 14px;
+    background: rgba(255,117,24,0.1);
+    padding: 6px 12px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,117,24,0.3);
   }
   
   #feed {
@@ -182,47 +193,46 @@ const INDEX_HTML = `<!DOCTYPE html>
     border-radius: 20px;
     margin-bottom: 24px;
     overflow: hidden;
-    box-shadow: var(--shadow);
-    transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    transition: all 0.3s;
     animation: fadeInUp 0.5s ease;
     position: relative;
   }
   
-  .card::before {
+  .card::after {
     content: '';
     position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+    top: 0; left: -100%; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
     transition: left 0.6s;
     pointer-events: none;
-    z-index: 1;
+    z-index: 2;
   }
   
-  .card:hover::before { left: 100%; }
+  .card:hover::after { left: 100%; }
   
   @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   
   .card:hover {
     transform: translateY(-4px);
-    box-shadow: var(--shadow-hover);
+    box-shadow: 0 12px 48px rgba(123,47,247,0.3);
     border-color: var(--purple);
   }
   
   .card video, .card img {
     width: 100%;
     display: block;
-    background: black;
+    background: #000;
     max-height: 640px;
     object-fit: contain;
+    position: relative;
+    z-index: 1;
   }
   
-  .card-body { padding: 16px 20px; }
+  .card-body { padding: 16px 20px; position: relative; z-index: 1; }
   
   .author {
     font-weight: 700;
@@ -232,7 +242,7 @@ const INDEX_HTML = `<!DOCTYPE html>
     margin-bottom: 6px;
   }
   
-  .card-body div:last-child {
+  .card-caption {
     color: var(--text-dim);
     font-size: 14px;
     line-height: 1.5;
@@ -244,32 +254,40 @@ const INDEX_HTML = `<!DOCTYPE html>
     padding: 12px 20px;
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
+    position: relative;
+    z-index: 1;
   }
   
-  .actions span {
+  .action-btn {
     cursor: pointer;
-    font-size: 15px;
-    transition: all 0.2s ease;
+    font-size: 16px;
+    transition: all 0.2s;
     user-select: none;
     display: flex;
     align-items: center;
     gap: 4px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text);
+    font-weight: 600;
+    box-shadow: none;
   }
   
-  .actions span:hover {
+  .action-btn:hover {
+    background: rgba(255,255,255,0.05);
     transform: scale(1.1);
   }
   
-  .actions span:active { transform: scale(0.95); }
+  .action-btn:active { transform: scale(0.9); }
   
-  .actions span.liked {
-    color: var(--red);
+  .action-btn.liked {
     animation: likePulse 0.4s ease;
   }
   
   @keyframes likePulse {
     0% { transform: scale(1); }
-    50% { transform: scale(1.5); }
+    50% { transform: scale(1.4); }
     100% { transform: scale(1); }
   }
   
@@ -277,6 +295,8 @@ const INDEX_HTML = `<!DOCTYPE html>
     padding: 12px 20px;
     font-size: 14px;
     color: var(--text-dim);
+    position: relative;
+    z-index: 1;
   }
   
   .comments div { padding: 6px 0; line-height: 1.5; }
@@ -286,6 +306,8 @@ const INDEX_HTML = `<!DOCTYPE html>
     display: flex;
     gap: 8px;
     padding: 12px 20px 16px;
+    position: relative;
+    z-index: 1;
   }
   
   .comment-input input {
@@ -297,7 +319,7 @@ const INDEX_HTML = `<!DOCTYPE html>
     padding: 10px 16px;
     font-size: 14px;
     outline: none;
-    transition: all 0.3s ease;
+    transition: all 0.3s;
   }
   
   .comment-input input:focus {
@@ -309,27 +331,26 @@ const INDEX_HTML = `<!DOCTYPE html>
     position: absolute;
     top: 12px;
     right: 12px;
-    background: rgba(255,68,68,0.9);
+    background: rgba(255,68,68,0.95);
     color: white;
     border: none;
-    padding: 8px 14px;
+    padding: 10px 16px;
     border-radius: 20px;
     cursor: pointer;
     font-weight: 700;
-    font-size: 13px;
-    z-index: 10;
-    opacity: 0;
-    transition: all 0.3s;
+    font-size: 14px;
+    z-index: 20;
     backdrop-filter: blur(8px);
-    box-shadow: 0 4px 16px rgba(255,68,68,0.4);
+    box-shadow: 0 4px 20px rgba(255,68,68,0.5);
+    transition: all 0.3s;
+    display: none;
   }
   
-  .card:hover .delete-btn { opacity: 1; }
+  .delete-btn.show { display: flex; }
   
   .delete-btn:hover {
     background: var(--red);
     transform: scale(1.1);
-    box-shadow: 0 4px 20px rgba(255,68,68,0.6);
   }
   
   .fab {
@@ -341,7 +362,6 @@ const INDEX_HTML = `<!DOCTYPE html>
     border-radius: 50%;
     box-shadow: 0 8px 32px rgba(255,117,24,0.5);
     z-index: 50;
-    transition: all 0.3s ease;
     animation: fabFloat 3s ease-in-out infinite;
   }
   
@@ -359,18 +379,12 @@ const INDEX_HTML = `<!DOCTYPE html>
   #uploadModal {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.9);
+    background: rgba(0,0,0,0.92);
     display: none;
     align-items: center;
     justify-content: center;
     z-index: 200;
     padding: 20px;
-    animation: fadeIn 0.3s ease;
-  }
-  
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
   }
   
   #uploadModal .box {
@@ -379,14 +393,14 @@ const INDEX_HTML = `<!DOCTYPE html>
     border-radius: 24px;
     width: 100%;
     max-width: 440px;
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow-hover);
-    animation: slideUp 0.3s ease;
+    border: 2px solid var(--purple);
+    box-shadow: 0 16px 64px rgba(123,47,247,0.5);
+    animation: modalPop 0.4s cubic-bezier(0.34,1.56,0.64,1);
   }
   
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
+  @keyframes modalPop {
+    from { opacity: 0; transform: scale(0.8) translateY(30px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
   }
   
   #uploadModal h3 {
@@ -398,18 +412,18 @@ const INDEX_HTML = `<!DOCTYPE html>
   
   #uploadModal input[type="file"] {
     width: 100%;
-    padding: 12px;
+    padding: 14px;
     background: var(--bg);
     border: 2px dashed var(--purple);
     border-radius: 16px;
     color: var(--text);
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.3s;
   }
   
   #uploadModal input[type="file"]:hover {
     border-color: var(--orange);
-    background: var(--card-hover);
+    background: rgba(255,117,24,0.05);
   }
   
   #uploadModal input[type="text"] {
@@ -422,7 +436,7 @@ const INDEX_HTML = `<!DOCTYPE html>
     color: var(--text);
     font-size: 14px;
     outline: none;
-    transition: all 0.3s ease;
+    transition: all 0.3s;
   }
   
   #uploadModal input[type="text"]:focus {
@@ -430,7 +444,13 @@ const INDEX_HTML = `<!DOCTYPE html>
     box-shadow: 0 0 0 3px var(--purple-glow);
   }
   
-  #uploadModal button { margin-top: 16px; width: 100%; }
+  .modal-buttons {
+    margin-top: 16px;
+    display: flex;
+    gap: 10px;
+  }
+  
+  .modal-buttons button { flex: 1; }
   
   #progressLog {
     font-size: 13px;
@@ -444,10 +464,7 @@ const INDEX_HTML = `<!DOCTYPE html>
     border: 1px solid var(--border);
   }
   
-  #progressLog div {
-    padding: 4px 0;
-    animation: fadeIn 0.3s ease;
-  }
+  #progressLog div { padding: 4px 0; }
   
   @media (max-width: 640px) {
     header { padding: 12px 16px; flex-wrap: wrap; }
@@ -456,13 +473,8 @@ const INDEX_HTML = `<!DOCTYPE html>
     header input { order: 3; width: 100%; max-width: 100%; margin-top: 10px; }
     #feed { padding: 16px 12px 100px; }
     .card { margin-bottom: 20px; border-radius: 16px; }
-    .card-body { padding: 14px 16px; }
-    .actions { padding: 12px 16px; gap: 16px; }
-    .comments { padding: 12px 16px; }
-    .comment-input { padding: 12px 16px 16px; }
     .fab { bottom: 20px; right: 20px; font-size: 28px; padding: 14px 18px; }
     #uploadModal .box { padding: 24px 20px; }
-    .delete-btn { opacity: 1; }
   }
   
   ::-webkit-scrollbar { width: 8px; }
@@ -470,16 +482,11 @@ const INDEX_HTML = `<!DOCTYPE html>
   ::-webkit-scrollbar-thumb { background: var(--purple); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--orange); }
   
-  .loading {
-    text-align: center;
-    padding: 40px;
-    color: var(--text-dim);
-  }
+  .loading { text-align: center; padding: 60px 20px; color: var(--text-dim); font-size: 18px; }
   
-  .loading::after {
-    content: '🎃';
+  .spinner {
     display: inline-block;
-    animation: spin 2s linear infinite;
+    animation: spin 1.5s linear infinite;
   }
   
   @keyframes spin {
@@ -489,23 +496,26 @@ const INDEX_HTML = `<!DOCTYPE html>
 </style>
 </head>
 <body>
+
+<div id="particleLayer"></div>
+
 <header>
-  <h1>🎃 HalloweenTok</h1>
-  <input id="searchInput" placeholder="🔍 Поиск жутких видео...">
-  <div id="authArea"></div>
+  <h1>HalloweenTok</h1>
+  <input id="searchInput" placeholder="Поиск...">
+  <div id="authArea"><span style="color:var(--text-dim)">...</span></div>
 </header>
 
 <div id="feed"></div>
-<button class="fab" onclick="openUploadModal()" title="Загрузить">👻</button>
+<button class="fab" onclick="openUploadModal()">+</button>
 
 <div id="uploadModal">
   <div class="box">
-    <h3>👻 Загрузить контент</h3>
+    <h3>Загрузить контент</h3>
     <input type="file" id="fileInput" accept="video/*,image/*">
-    <input type="text" id="captionInput" placeholder="✨ Подпись к контенту...">
-    <div style="margin-top:16px;display:flex;gap:10px;">
-      <button onclick="startUpload()" style="flex:1;">🚀 Загрузить</button>
-      <button onclick="closeUploadModal()" style="flex:1;background:#333;">❌ Отмена</button>
+    <input type="text" id="captionInput" placeholder="Подпись...">
+    <div class="modal-buttons">
+      <button onclick="startUpload()">Загрузить</button>
+      <button onclick="closeUploadModal()" style="background:#333;">Отмена</button>
     </div>
     <div id="progressLog"></div>
   </div>
@@ -515,9 +525,8 @@ const INDEX_HTML = `<!DOCTYPE html>
 const MAX_VIDEO_BYTES = 3 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 0.5 * 1024 * 1024;
 const ADMIN_NICK = 'vrema7760-cyber';
-const HALLOWEEN_EMOJIS = ['','👻','🦇','️','💀','🧟','✨','💜','🧡'];
-const PARTICLE_COLORS = ['#ff7518','#7b2ff7','#6dff8f','#ff1493','#00ffff'];
-
+const EMOJIS = ['','','','','','','','','','','','',''];
+const COLORS = ['#ff7518','#7b2ff7','#6dff8f','#ff1493','#00ffff','#ffeb3b','#ff5722'];
 const COMPRESS_LADDER = [
   { height: 720, fps: 60, kbps: 800 },
   { height: 720, fps: 60, kbps: 400 },
@@ -527,36 +536,44 @@ const COMPRESS_LADDER = [
 ];
 
 let currentUser = null;
+let currentUserLoaded = false;
+const pLayer = document.getElementById('particleLayer');
 
-function createParticle(x, y) {
-  const p = document.createElement('div');
-  p.className = 'particle';
-  const size = Math.random() * 10 + 5;
-  const color = PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)];
-  p.style.cssText = \`left:\${x}px;top:\${y}px;width:\${size}px;height:\${size}px;background:\${color};border-radius:50%;box-shadow:0 0 \${size*2}px \${color};--tx:\${(Math.random()-0.5)*250}px;--ty:\${(Math.random()-0.5)*250}px;\`;
-  document.body.appendChild(p);
-  setTimeout(() => p.remove(), 1200);
+// ========== PARTICLES ==========
+function spawnParticles(x, y) {
+  for (let i = 0; i < 12; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = 4 + Math.random() * 10;
+    const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 60 + Math.random() * 140;
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist;
+    p.style.cssText = 'left:' + x + 'px;top:' + y + 'px;width:' + size + 'px;height:' + size + 'px;background:' + color + ';box-shadow:0 0 ' + (size*2) + 'px ' + color + ';--dx:' + dx + 'px;--dy:' + dy + 'px;';
+    pLayer.appendChild(p);
+    setTimeout(() => p.remove(), 1000);
+  }
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => {
+      const e = document.createElement('div');
+      e.className = 'emoji-particle';
+      e.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+      const dx = -80 + Math.random() * 160;
+      const dy = -120 - Math.random() * 180;
+      e.style.cssText = 'left:' + x + 'px;top:' + y + 'px;--dx:' + dx + 'px;--dy:' + dy + 'px;';
+      pLayer.appendChild(e);
+      setTimeout(() => e.remove(), 1500);
+    }, i * 60);
+  }
 }
 
-function createEmoji(x, y) {
-  const e = document.createElement('div');
-  e.className = 'emoji-particle';
-  e.textContent = HALLOWEEN_EMOJIS[Math.floor(Math.random() * HALLOWEEN_EMOJIS.length)];
-  e.style.cssText = \`left:\${x}px;top:\${y}px;--tx:\${(Math.random()-0.5)*200}px;--ty:\${-Math.random()*250-150}px;\`;
-  document.body.appendChild(e);
-  setTimeout(() => e.remove(), 1800);
-}
+document.addEventListener('pointerdown', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'VIDEO') return;
+  spawnParticles(e.clientX, e.clientY);
+}, {passive: true});
 
-function spawn(x, y) {
-  for(let i=0; i<10; i++) setTimeout(() => createParticle(x, y), i*40);
-  for(let i=0; i<3; i++) setTimeout(() => createEmoji(x, y), i*80);
-}
-
-document.addEventListener('click', e => spawn(e.clientX, e.clientY));
-document.addEventListener('touchstart', e => {
-  for(let t of e.touches) spawn(t.clientX, t.clientY);
-}, {passive:true});
-
+// ========== LOGGING ==========
 function log(msg) {
   const el = document.getElementById('progressLog');
   el.innerHTML += '<div>' + msg + '</div>';
@@ -566,28 +583,28 @@ function log(msg) {
 function openUploadModal() { document.getElementById('uploadModal').style.display = 'flex'; }
 function closeUploadModal() { document.getElementById('uploadModal').style.display = 'none'; document.getElementById('progressLog').innerHTML = ''; }
 
+// ========== COMPRESS ==========
 async function compressPhoto(file) {
   const img = await loadImage(file);
   const canvas = document.createElement('canvas');
   const scale = Math.min(1, 1080 / Math.max(img.width, img.height));
   canvas.width = Math.round(img.width * scale);
   canvas.height = Math.round(img.height * scale);
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
   return new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.75));
 }
 
 async function compressVideo(file) {
   const video = await loadVideo(file);
   const duration = video.duration || 10;
-  log('🎬 Оригинал: ' + (file.size/1024/1024).toFixed(2) + 'MB, ' + duration.toFixed(1) + 'с');
+  log('Оригинал: ' + (file.size/1024/1024).toFixed(2) + 'MB, ' + duration.toFixed(1) + 'с');
   for (let i = 0; i < COMPRESS_LADDER.length; i++) {
-    const step = COMPRESS_LADDER[i];
-    log('🎬 ' + step.height + 'p @ ' + step.fps + 'fps @ ' + step.kbps + 'kbps...');
-    const blob = await recodeVideo(video, step.height, step.fps, step.kbps * 1000);
-    log('  → ' + (blob.size/1024/1024).toFixed(2) + 'MB');
+    const s = COMPRESS_LADDER[i];
+    log(s.height + 'p @ ' + s.fps + 'fps @ ' + s.kbps + 'kbps...');
+    const blob = await recodeVideo(video, s.height, s.fps, s.kbps * 1000);
+    log('  -> ' + (blob.size/1024/1024).toFixed(2) + 'MB');
     if (blob.size <= MAX_VIDEO_BYTES) {
-      return { blob, resolution: step.height + 'p', fps: step.fps, bitrate_kbps: step.kbps };
+      return { blob, resolution: s.height + 'p', fps: s.fps, bitrate_kbps: s.kbps };
     }
   }
   const last = COMPRESS_LADDER[COMPRESS_LADDER.length - 1];
@@ -597,175 +614,182 @@ async function compressVideo(file) {
 
 function loadImage(file) {
   return new Promise((res, rej) => {
-    const img = new Image();
-    img.onload = () => res(img);
-    img.onerror = rej;
-    img.src = URL.createObjectURL(file);
+    const img = new Image(); img.onload = () => res(img); img.onerror = rej; img.src = URL.createObjectURL(file);
   });
 }
 
 function loadVideo(file) {
   return new Promise((res, rej) => {
-    const v = document.createElement('video');
-    v.muted = true;
-    v.playsInline = true;
-    v.onloadedmetadata = () => res(v);
-    v.onerror = rej;
-    v.src = URL.createObjectURL(file);
+    const v = document.createElement('video'); v.muted = true; v.playsInline = true;
+    v.onloadedmetadata = () => res(v); v.onerror = rej; v.src = URL.createObjectURL(file);
   });
 }
 
-function recodeVideo(video, height, fps, videoBitsPerSecond) {
+function recodeVideo(video, height, fps, bits) {
   return new Promise(async (resolve) => {
     const scale = height / video.videoHeight;
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(video.videoWidth * scale);
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    const stream = canvas.captureStream(fps);
+    const c = document.createElement('canvas');
+    c.width = Math.round(video.videoWidth * scale); c.height = height;
+    const ctx = c.getContext('2d');
+    const stream = c.captureStream(fps);
     const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
-    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond });
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: bits });
     const chunks = [];
-    rec.ondataavailable = e => { if(e.data.size>0) chunks.push(e.data); };
-    rec.onstop = () => resolve(new Blob(chunks, {type:mime}));
+    rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    rec.onstop = () => resolve(new Blob(chunks, {type: mime}));
     video.currentTime = 0;
     await video.play();
     rec.start();
-    let lastFrame = 0;
-    const frameInterval = 1000 / fps;
+    let last = 0;
+    const interval = 1000 / fps;
     function draw(now) {
-      if(video.paused || video.ended) { rec.stop(); return; }
-      if(now - lastFrame >= frameInterval) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        lastFrame = now;
-      }
+      if (video.paused || video.ended) { rec.stop(); return; }
+      if (now - last >= interval) { ctx.drawImage(video, 0, 0, c.width, c.height); last = now; }
       requestAnimationFrame(draw);
     }
     requestAnimationFrame(draw);
-    video.onended = () => { try{rec.stop();}catch(e){} };
+    video.onended = () => { try { rec.stop(); } catch(e){} };
   });
 }
 
 function blobToBase64(blob) {
-  return new Promise(res => {
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(',')[1]);
-    r.readAsDataURL(blob);
-  });
+  return new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.readAsDataURL(blob); });
 }
 
+// ========== UPLOAD ==========
 async function startUpload() {
   const file = document.getElementById('fileInput').files[0];
   const caption = document.getElementById('captionInput').value;
-  if(!file) return alert('Выбери файл');
-  log(' Начинаю сжатие...');
+  if (!file) return alert('Выбери файл');
+  log('Начинаю...');
   const isVideo = file.type.startsWith('video/');
   let payload;
-  if(isVideo) {
-    const { blob, resolution, fps, bitrate_kbps } = await compressVideo(file);
-    payload = { type:'video', mime:blob.type, base64:await blobToBase64(blob), caption, resolution, fps, bitrate_kbps };
-    log('✅ Видео сжато: ' + (blob.size/1024/1024).toFixed(2) + 'MB');
+  if (isVideo) {
+    const r = await compressVideo(file);
+    payload = { type:'video', mime:r.blob.type, base64:await blobToBase64(r.blob), caption, resolution:r.resolution, fps:r.fps, bitrate_kbps:r.bitrate_kbps };
+    log('Видео: ' + (r.blob.size/1024/1024).toFixed(2) + 'MB');
   } else {
     const blob = await compressPhoto(file);
     payload = { type:'photo', mime:'image/jpeg', base64:await blobToBase64(blob), caption };
-    log('✅ Фото сжато: ' + (blob.size/1024).toFixed(0) + 'KB');
+    log('Фото: ' + (blob.size/1024).toFixed(0) + 'KB');
   }
-  log('📤 Загрузка...');
-  const res = await fetch('/api/upload', {
-    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
-  });
+  log('Загрузка на сервер...');
+  const res = await fetch('/api/upload', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
   const data = await res.json();
-  if(data.error) { log('❌ ' + data.error); return; }
-  log('✅ Готово!');
+  if (data.error) { log('Ошибка: ' + data.error); return; }
+  log('Готово!');
   closeUploadModal();
   loadFeed();
 }
 
+// ========== FEED ==========
 async function loadFeed() {
+  if (!currentUserLoaded) return;
   const feed = document.getElementById('feed');
-  feed.innerHTML = '<div class="loading">Загружаю ленту...</div>';
+  feed.innerHTML = '<div class="loading"><span class="spinner"></span> Загрузка...</div>';
   try {
     const res = await fetch('/api/feed');
     const data = await res.json();
     feed.innerHTML = '';
-    if(!data.items || data.items.length === 0) {
-      feed.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-dim);">👻 Пока пусто. Будь первым, кто загрузит контент!</div>';
+    if (!data.items || data.items.length === 0) {
+      feed.innerHTML = '<div style="text-align:center;padding:80px 20px;color:var(--text-dim);font-size:18px;">Пока пусто</div>';
       return;
     }
-    for(const item of data.items) feed.appendChild(renderCard(item));
+    for (const item of data.items) feed.appendChild(renderCard(item));
   } catch(e) {
-    feed.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--red);">❌ Ошибка загрузки</div>';
+    feed.innerHTML = '<div style="text-align:center;padding:60px;color:var(--red);">Ошибка</div>';
   }
 }
 
 function renderCard(item) {
   const div = document.createElement('div');
   div.className = 'card';
-  const isOwner = currentUser && (item.author_name === currentUser || item.author_name === ADMIN_NICK);
-  const deleteBtn = isOwner ? '<button class="delete-btn" onclick="event.stopPropagation();deleteMedia(\\\'' + item.id + '\\\')">🗑️ Удалить</button>' : '';
-  const media = item.type === 'video' 
+  
+  const canDelete = currentUser && (item.author_name === currentUser || currentUser === ADMIN_NICK);
+  
+  const media = item.type === 'video'
     ? '<video src="/api/media/' + item.id + '/content" controls loop playsinline></video>'
     : '<img src="/api/media/' + item.id + '/content" loading="lazy">';
-  div.innerHTML = \`
-    \${deleteBtn}
-    \${media}
-    <div class="card-body">
-      <span class="author">@\${item.author_name}</span>
-      <div>\${item.caption || ''}</div>
-    </div>
-    <div class="actions">
-      <span onclick="event.stopPropagation();toggleLike('\${item.id}', this)" data-liked="\${item.is_liked || false}">❤️ \${item.likes_count || 0}</span>
-      <span onclick="event.stopPropagation();toggleSave('\${item.id}', this)">🔖 \${item.saves_count || 0}</span>
-      <span>💬 \${item.comments_count || 0}</span>
-    </div>
-    <div class="comments" id="comments-\${item.id}"></div>
-    <div class="comment-input">
-      <input placeholder="Оставь жуткий коммент..." onkeydown="event.stopPropagation();if(event.key==='Enter')sendComment('\${item.id}',this)">
-    </div>
-  \`;
+
+  div.innerHTML = media +
+    '<button class="delete-btn' + (canDelete ? ' show' : '') + '" data-id="' + item.id + '">Удалить</button>' +
+    '<div class="card-body">' +
+      '<span class="author">@' + (item.author_name || 'anon') + '</span>' +
+      '<div class="card-caption">' + (item.caption || '') + '</div>' +
+    '</div>' +
+    '<div class="actions">' +
+      '<button class="action-btn" data-action="like" data-id="' + item.id + '">❤️ ' + (item.likes_count || 0) + '</button>' +
+      '<button class="action-btn" data-action="save" data-id="' + item.id + '">🔖 ' + (item.saves_count || 0) + '</button>' +
+      '<span class="action-btn">💬 ' + (item.comments_count || 0) + '</span>' +
+    '</div>' +
+    '<div class="comments" id="comments-' + item.id + '"></div>' +
+    '<div class="comment-input">' +
+      '<input placeholder="Комментарий..." data-media="' + item.id + '">' +
+    '</div>';
+
+  div.querySelector('.delete-btn').addEventListener('click', function(e) {
+    e.stopPropagation();
+    deleteMedia(this.dataset.id);
+  });
+
+  div.querySelector('[data-action="like"]').addEventListener('click', function(e) {
+    e.stopPropagation();
+    toggleLike(this.dataset.id, this);
+  });
+
+  div.querySelector('[data-action="save"]').addEventListener('click', function(e) {
+    e.stopPropagation();
+    toggleSave(this.dataset.id);
+  });
+
+  const commentInput = div.querySelector('.comment-input input');
+  commentInput.addEventListener('keydown', function(e) {
+    e.stopPropagation();
+    if (e.key === 'Enter') sendComment(this.dataset.media, this);
+  });
+
   loadComments(item.id);
   return div;
 }
 
 async function toggleLike(id, el) {
-  const wasLiked = el.dataset.liked === 'true';
   const res = await fetch('/api/media/' + id + '/like', {method:'POST'});
   const data = await res.json();
-  el.dataset.liked = data.liked;
-  el.textContent = (data.liked ? '❤️' : '❤️ ') + data.likes_count;
-  if(data.liked && !wasLiked) {
-    el.classList.add('liked');
-    setTimeout(() => el.classList.remove('liked'), 400);
-  }
+  el.innerHTML = (data.liked ? '❤️' : '❤️ ') + ' ' + data.likes_count;
+  el.classList.add('liked');
+  setTimeout(() => el.classList.remove('liked'), 400);
+  spawnParticles(el.getBoundingClientRect().left + 20, el.getBoundingClientRect().top);
 }
 
-async function toggleSave(id, el) {
+async function toggleSave(id) {
   await fetch('/api/media/' + id + '/save', {method:'POST'});
   loadFeed();
 }
 
 async function deleteMedia(id) {
-  if(!confirm('Удалить это видео?')) return;
+  if (!confirm('Удалить?')) return;
   const res = await fetch('/api/media/' + id, {method:'DELETE'});
-  if(res.ok) { loadFeed(); }
-  else { const data = await res.json(); alert('Ошибка: ' + (data.error || 'неизвестная')); }
+  if (res.ok) loadFeed();
+  else alert('Ошибка удаления');
 }
 
 async function loadComments(mediaId) {
-  const res = await fetch('/api/media/' + mediaId + '/comments');
-  const data = await res.json();
-  const el = document.getElementById('comments-' + mediaId);
-  if(!el) return;
-  if(!data.items || data.items.length === 0) {
-    el.innerHTML = '<div style="color:var(--text-dim);font-style:italic;">Пока нет комментариев...</div>';
-    return;
-  }
-  el.innerHTML = data.items.map(c => '<div><b>@' + c.author_name + ':</b> ' + c.text + '</div>').join('');
+  try {
+    const res = await fetch('/api/media/' + mediaId + '/comments');
+    const data = await res.json();
+    const el = document.getElementById('comments-' + mediaId);
+    if (!el) return;
+    if (!data.items || data.items.length === 0) {
+      el.innerHTML = '<div style="color:var(--text-dim);font-style:italic;">Нет комментариев</div>';
+      return;
+    }
+    el.innerHTML = data.items.map(c => '<div><b>@' + c.author_name + ':</b> ' + c.text + '</div>').join('');
+  } catch(e) {}
 }
 
 async function sendComment(mediaId, input) {
   const text = input.value.trim();
-  if(!text) return;
+  if (!text) return;
   await fetch('/api/media/' + mediaId + '/comments', {
     method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text})
   });
@@ -773,39 +797,42 @@ async function sendComment(mediaId, input) {
   loadComments(mediaId);
 }
 
-document.getElementById('searchInput').addEventListener('input', debounce(async e => {
-  const q = e.target.value.trim();
-  if(!q) return loadFeed();
-  const res = await fetch('/api/search?q=' + encodeURIComponent(q));
-  const data = await res.json();
-  const feed = document.getElementById('feed');
-  feed.innerHTML = '';
-  if(!data.media || data.media.length === 0) {
-    feed.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-dim);"> Ничего не найдено</div>';
-    return;
-  }
-  for(const item of data.media) feed.appendChild(renderCard(item));
-}, 400));
+// ========== SEARCH ==========
+let searchTimer;
+document.getElementById('searchInput').addEventListener('input', function(e) {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(async () => {
+    const q = e.target.value.trim();
+    if (!q) return loadFeed();
+    const res = await fetch('/api/search?q=' + encodeURIComponent(q));
+    const data = await res.json();
+    const feed = document.getElementById('feed');
+    feed.innerHTML = '';
+    if (!data.media || data.media.length === 0) {
+      feed.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-dim);">Ничего не найдено</div>';
+      return;
+    }
+    for (const item of data.media) feed.appendChild(renderCard(item));
+  }, 400);
+});
 
-function debounce(fn, ms) {
-  let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
-}
-
-async function initAuth() {
+// ========== AUTH ==========
+async function init() {
   try {
     const res = await fetch('/api/me');
-    if(res.ok) {
+    if (res.ok) {
       const user = await res.json();
       currentUser = user.name;
-      document.getElementById('authArea').innerHTML = 
-        '<span style="color:var(--orange);font-weight:700;font-size:14px;">👤 @' + user.name + '</span>' +
+      document.getElementById('authArea').innerHTML =
+        '<span class="user-badge">@' + user.name + '</span>' +
         '<button class="btn-logout" onclick="logout()">Выйти</button>';
     } else {
-      document.getElementById('authArea').innerHTML = '<a class="btn" href="/auth/github"> Войти</a>';
+      document.getElementById('authArea').innerHTML = '<a class="btn" href="/auth/github">Войти</a>';
     }
   } catch(e) {
-    document.getElementById('authArea').innerHTML = '<a class="btn" href="/auth/github">🐙 Войти</a>';
+    document.getElementById('authArea').innerHTML = '<a class="btn" href="/auth/github">Войти</a>';
   }
+  currentUserLoaded = true;
   loadFeed();
 }
 
@@ -814,7 +841,7 @@ function logout() {
   location.reload();
 }
 
-initAuth();
+init();
 </script>
 </body>
 </html>`;
