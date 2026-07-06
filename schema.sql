@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS users (
   id            TEXT PRIMARY KEY,             -- uuid
-  google_id     TEXT UNIQUE NOT NULL,
+  github_id     TEXT UNIQUE NOT NULL,
   email         TEXT NOT NULL,
   name          TEXT NOT NULL,
   avatar_url    TEXT,
