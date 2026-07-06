@@ -41,6 +41,7 @@ const INDEX_HTML = `<!DOCTYPE html>
     overflow-x: hidden;
     position: relative;
     -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
   }
   
   body::before {
@@ -55,6 +56,47 @@ const INDEX_HTML = `<!DOCTYPE html>
       radial-gradient(circle at 80% 90%, var(--orange-glow), transparent 40%);
     pointer-events: none;
     z-index: 0;
+  }
+  
+  /* Particle Effects */
+  .particle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    animation: particleFloat 1.5s ease-out forwards;
+  }
+  
+  .emoji-particle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    font-size: 24px;
+    animation: emojiFloat 2s ease-out forwards;
+  }
+  
+  @keyframes particleFloat {
+    0% {
+      opacity: 1;
+      transform: translate(0, 0) scale(1) rotate(0deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(var(--tx), var(--ty)) scale(0) rotate(360deg);
+    }
+  }
+  
+  @keyframes emojiFloat {
+    0% {
+      opacity: 1;
+      transform: translate(0, 0) scale(0) rotate(0deg);
+    }
+    10% {
+      transform: translate(0, 0) scale(1.5) rotate(36deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(var(--tx), calc(var(--ty) - 100px)) scale(0.5) rotate(360deg);
+    }
   }
   
   /* Header */
@@ -128,6 +170,8 @@ const INDEX_HTML = `<!DOCTYPE html>
     justify-content: center;
     gap: 6px;
     white-space: nowrap;
+    position: relative;
+    overflow: hidden;
   }
   
   button:hover, .btn:hover {
@@ -517,11 +561,87 @@ const INDEX_HTML = `<!DOCTYPE html>
 const MAX_VIDEO_BYTES = 3 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 0.5 * 1024 * 1024;
 
+// Halloween emojis for particles
+const HALLOWEEN_EMOJIS = ['🎃', '👻', '🦇', '🕷️', '🕸️', '💀', '🧟', '', '', '', '✨', '💜', '🧡'];
+const PARTICLE_COLORS = ['#ff7518', '#7b2ff7', '#6dff8f', '#ff1493', '#00ffff', '#ffff00'];
+
 function log(msg) {
   const el = document.getElementById('progressLog');
   el.innerHTML += '<div>' + msg + '</div>';
   el.scrollTop = el.scrollHeight;
 }
+
+// Particle Effects System
+function createParticle(x, y) {
+  const particle = document.createElement('div');
+  particle.className = 'particle';
+  
+  const size = Math.random() * 8 + 4;
+  const color = PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)];
+  const tx = (Math.random() - 0.5) * 200;
+  const ty = (Math.random() - 0.5) * 200;
+  
+  particle.style.cssText = \`
+    left: \${x}px;
+    top: \${y}px;
+    width: \${size}px;
+    height: \${size}px;
+    background: \${color};
+    border-radius: 50%;
+    box-shadow: 0 0 \${size * 2}px \${color};
+    --tx: \${tx}px;
+    --ty: \${ty}px;
+  \`;
+  
+  document.body.appendChild(particle);
+  setTimeout(() => particle.remove(), 1500);
+}
+
+function createEmojiParticle(x, y) {
+  const emoji = document.createElement('div');
+  emoji.className = 'emoji-particle';
+  emoji.textContent = HALLOWEEN_EMOJIS[Math.floor(Math.random() * HALLOWEEN_EMOJIS.length)];
+  
+  const tx = (Math.random() - 0.5) * 150;
+  const ty = -Math.random() * 200 - 100;
+  
+  emoji.style.cssText = \`
+    left: \${x}px;
+    top: \${y}px;
+    --tx: \${tx}px;
+    --ty: \${ty}px;
+  \`;
+  
+  document.body.appendChild(emoji);
+  setTimeout(() => emoji.remove(), 2000);
+}
+
+function spawnParticles(x, y, count = 8) {
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => createParticle(x, y), i * 50);
+  }
+  
+  // Spawn 2-3 emojis
+  const emojiCount = Math.floor(Math.random() * 2) + 2;
+  for (let i = 0; i < emojiCount; i++) {
+    setTimeout(() => createEmojiParticle(x, y), i * 100);
+  }
+}
+
+// Click/Touch handler for particles
+function handleInteraction(e) {
+  const touches = e.touches || [e];
+  
+  for (const touch of touches) {
+    const x = touch.clientX;
+    const y = touch.clientY;
+    spawnParticles(x, y, 6);
+  }
+}
+
+// Add event listeners
+document.addEventListener('click', handleInteraction);
+document.addEventListener('touchstart', handleInteraction, { passive: true });
 
 function openUploadModal() { 
   document.getElementById('uploadModal').style.display = 'flex'; 
