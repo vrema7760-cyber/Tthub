@@ -1,6 +1,6 @@
 import { json } from './utils.js';
 import { githubLoginRedirect, githubCallback } from './auth.js';
-import { handleUpload, handleFeed, handleMediaContent } from './media.js';
+import { handleUpload, handleFeed, handleMediaContent, handleDeleteMedia } from './media.js';
 import { handleLike, handleSave, handleComment, handleListComments } from './social.js';
 import {
   handleListChats, handleOpenChat, handleSendMessage, handleGetMessages,
@@ -11,7 +11,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
-    const redirectUri = `${url.origin}/auth/github/callback`;
+    const redirectUri = \`\${url.origin}/auth/github/callback\`;
 
     try {
       // --- Auth ---
@@ -27,16 +27,19 @@ export default {
       if (path === '/api/feed' && request.method === 'GET') return handleFeed(request, env);
 
       let m;
-      if ((m = path.match(/^\/api\/media\/([\w-]+)\/content$/)) && request.method === 'GET') {
+      if ((m = path.match(/^\\/api\\/media\\/([\\w-]+)\\/content\$/)) && request.method === 'GET') {
         return handleMediaContent(request, env, m[1]);
       }
-      if ((m = path.match(/^\/api\/media\/([\w-]+)\/like$/)) && request.method === 'POST') {
+      if ((m = path.match(/^\\/api\\/media\\/([\\w-]+)\$/)) && request.method === 'DELETE') {
+        return handleDeleteMedia(request, env, m[1]);
+      }
+      if ((m = path.match(/^\\/api\\/media\\/([\\w-]+)\\/like\$/)) && request.method === 'POST') {
         return handleLike(request, env, m[1]);
       }
-      if ((m = path.match(/^\/api\/media\/([\w-]+)\/save$/)) && request.method === 'POST') {
+      if ((m = path.match(/^\\/api\\/media\\/([\\w-]+)\\/save\$/)) && request.method === 'POST') {
         return handleSave(request, env, m[1]);
       }
-      if ((m = path.match(/^\/api\/media\/([\w-]+)\/comments$/))) {
+      if ((m = path.match(/^\\/api\\/media\\/([\\w-]+)\\/comments\$/))) {
         if (request.method === 'POST') return handleComment(request, env, m[1]);
         if (request.method === 'GET') return handleListComments(request, env, m[1]);
       }
@@ -47,7 +50,7 @@ export default {
       // --- Chat ---
       if (path === '/api/chats' && request.method === 'GET') return handleListChats(request, env);
       if (path === '/api/chats/open' && request.method === 'POST') return handleOpenChat(request, env);
-      if ((m = path.match(/^\/api\/chats\/([\w-]+)\/messages$/))) {
+      if ((m = path.match(/^\\/api\\/chats\\/([\\w-]+)\\/messages\$/))) {
         if (request.method === 'POST') return handleSendMessage(request, env, m[1]);
         if (request.method === 'GET') return handleGetMessages(request, env, m[1]);
       }
@@ -64,6 +67,4 @@ export default {
   },
 };
 
-// Инлайним HTML, чтобы не заводить отдельный ассет-биндинг.
-// (Можно вынести в Cloudflare Pages/Assets — но раз хотим один воркер, держим тут.)
 import INDEX_HTML from './index.html.js';
