@@ -246,6 +246,13 @@ const INDEX_HTML = `<!DOCTYPE html>
     font-size: 15px;
     display: block;
     margin-bottom: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .author:hover {
+    color: var(--purple);
+    text-shadow: 0 0 12px var(--purple-glow);
   }
   
   .card-caption {
@@ -391,7 +398,7 @@ const INDEX_HTML = `<!DOCTYPE html>
     box-shadow: 0 12px 40px rgba(255,117,24,0.7);
   }
   
-  #uploadModal {
+  #uploadModal, #chatModal {
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.92);
@@ -402,7 +409,7 @@ const INDEX_HTML = `<!DOCTYPE html>
     padding: 20px;
   }
   
-  #uploadModal .box {
+  #uploadModal .box, #chatModal .box {
     background: var(--card);
     padding: 28px;
     border-radius: 24px;
@@ -413,16 +420,113 @@ const INDEX_HTML = `<!DOCTYPE html>
     animation: modalPop 0.4s cubic-bezier(0.34,1.56,0.64,1);
   }
   
+  #chatModal .box {
+    max-width: 500px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+  
   @keyframes modalPop {
     from { opacity: 0; transform: scale(0.8) translateY(30px); }
     to { opacity: 1; transform: scale(1) translateY(0); }
   }
   
-  #uploadModal h3 {
+  #uploadModal h3, #chatModal h3 {
     color: var(--orange);
     margin-bottom: 20px;
     font-size: 22px;
     font-weight: 700;
+    padding: 20px 20px 0;
+  }
+  
+  #chatModal .chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(13,7,20,0.5);
+  }
+  
+  #chatModal .chat-header h3 {
+    margin: 0;
+    padding: 0;
+  }
+  
+  #chatModal .close-chat {
+    background: #333;
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+  
+  #chatMessages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    min-height: 300px;
+    max-height: 50vh;
+  }
+  
+  .chat-message {
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    border-radius: 16px;
+    max-width: 80%;
+    animation: msgSlide 0.3s ease;
+  }
+  
+  @keyframes msgSlide {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .chat-message.mine {
+    background: linear-gradient(135deg, var(--purple), var(--orange));
+    margin-left: auto;
+    border-bottom-right-radius: 4px;
+  }
+  
+  .chat-message.other {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+  
+  .chat-message .msg-author {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  
+  .chat-message .msg-text {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  .chat-input-area {
+    display: flex;
+    gap: 8px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    background: rgba(13,7,20,0.5);
+  }
+  
+  .chat-input-area input {
+    flex: 1;
+    border-radius: 20px;
+    border: 2px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    padding: 10px 16px;
+    font-size: 14px;
+    outline: none;
+  }
+  
+  .chat-input-area input:focus {
+    border-color: var(--purple);
   }
   
   #uploadModal input[type="file"] {
@@ -434,6 +538,8 @@ const INDEX_HTML = `<!DOCTYPE html>
     color: var(--text);
     cursor: pointer;
     transition: all 0.3s;
+    margin: 0 20px;
+    width: calc(100% - 40px);
   }
   
   #uploadModal input[type="file"]:hover {
@@ -442,8 +548,8 @@ const INDEX_HTML = `<!DOCTYPE html>
   }
   
   #uploadModal input[type="text"] {
-    width: 100%;
-    margin-top: 12px;
+    width: calc(100% - 40px);
+    margin: 12px 20px 0;
     padding: 12px 16px;
     border-radius: 16px;
     border: 2px solid var(--border);
@@ -460,7 +566,7 @@ const INDEX_HTML = `<!DOCTYPE html>
   }
   
   .modal-buttons {
-    margin-top: 16px;
+    margin: 16px 20px 0;
     display: flex;
     gap: 10px;
   }
@@ -472,7 +578,7 @@ const INDEX_HTML = `<!DOCTYPE html>
     color: var(--text-dim);
     max-height: 150px;
     overflow-y: auto;
-    margin-top: 16px;
+    margin: 16px 20px 20px;
     padding: 12px;
     background: var(--bg);
     border-radius: 12px;
@@ -489,7 +595,6 @@ const INDEX_HTML = `<!DOCTYPE html>
     #feed { padding: 16px 12px 100px; }
     .card { margin-bottom: 20px; border-radius: 16px; }
     .fab { bottom: 20px; right: 20px; font-size: 28px; padding: 14px 18px; }
-    #uploadModal .box { padding: 24px 20px; }
   }
   
   ::-webkit-scrollbar { width: 8px; }
@@ -563,6 +668,20 @@ const INDEX_HTML = `<!DOCTYPE html>
   </div>
 </div>
 
+<div id="chatModal">
+  <div class="box">
+    <div class="chat-header">
+      <h3 id="chatTitle">Чат</h3>
+      <button class="close-chat" onclick="closeChat()">Закрыть</button>
+    </div>
+    <div id="chatMessages"></div>
+    <div class="chat-input-area">
+      <input id="chatInput" placeholder="Написать сообщение...">
+      <button onclick="sendChatMessage()">Отправить</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const MAX_VIDEO_BYTES = 3 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 0.5 * 1024 * 1024;
@@ -579,6 +698,7 @@ const COMPRESS_LADDER = [
 
 let currentUser = null;
 let currentUserLoaded = false;
+let currentChatUserId = null;
 const pLayer = document.getElementById('particleLayer');
 
 // ========== PARTICLES ==========
@@ -613,6 +733,52 @@ function spawnParticles(x, y) {
 document.addEventListener('pointerdown', function(e) {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'VIDEO') return;
   spawnParticles(e.clientX, e.clientY);
+}, {passive: true});
+
+// ========== SWIPE EASTER EGG ==========
+let swipeSequence = [];
+const SWIPE_PATTERN = ['up','up','down','down','left','right','left','right'];
+let lastSwipeTime = 0;
+
+document.addEventListener('touchstart', function(e) {
+  if (e.touches.length !== 1) return;
+  const touch = e.touches[0];
+  this._swipeStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+}, {passive: true});
+
+document.addEventListener('touchend', function(e) {
+  if (!this._swipeStart) return;
+  const touch = e.changedTouches[0];
+  const dx = touch.clientX - this._swipeStart.x;
+  const dy = touch.clientY - this._swipeStart.y;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  
+  if (dist < 50) return;
+  
+  let direction;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    direction = dx > 0 ? 'right' : 'left';
+  } else {
+    direction = dy > 0 ? 'down' : 'up';
+  }
+  
+  const now = Date.now();
+  if (now - lastSwipeTime > 2000) swipeSequence = [];
+  lastSwipeTime = now;
+  
+  swipeSequence.push(direction);
+  
+  if (swipeSequence.length > SWIPE_PATTERN.length) {
+    swipeSequence.shift();
+  }
+  
+  if (JSON.stringify(swipeSequence) === JSON.stringify(SWIPE_PATTERN)) {
+    showEasterEgg('👻', 'Секретный код активирован!');
+    for (let i = 0; i < 30; i++) {
+      setTimeout(() => spawnParticles(Math.random() * window.innerWidth, Math.random() * window.innerHeight), i * 30);
+    }
+    swipeSequence = [];
+  }
 }, {passive: true});
 
 // ========== LOGGING ==========
@@ -764,7 +930,7 @@ function renderCard(item) {
   div.innerHTML = media +
     '<button class="delete-btn' + (canDelete ? ' show' : '') + '" data-id="' + item.id + '">Удалить</button>' +
     '<div class="card-body">' +
-      '<span class="author">@' + (item.author_name || 'anon') + '</span>' +
+      '<span class="author" data-user="' + item.user_id + '" data-name="' + (item.author_name || 'anon') + '">@' + (item.author_name || 'anon') + '</span>' +
       '<div class="card-caption">' + (item.caption || '') + '</div>' +
     '</div>' +
     '<div class="actions">' +
@@ -790,6 +956,11 @@ function renderCard(item) {
   div.querySelector('[data-action="save"]').addEventListener('click', function(e) {
     e.stopPropagation();
     toggleSave(this.dataset.id);
+  });
+
+  div.querySelector('.author').addEventListener('click', function(e) {
+    e.stopPropagation();
+    openChat(this.dataset.user, this.dataset.name);
   });
 
   const commentInput = div.querySelector('.comment-input input');
@@ -847,6 +1018,95 @@ async function sendComment(mediaId, input) {
   loadComments(mediaId);
 }
 
+// ========== CHAT ==========
+async function openChat(userId, userName) {
+  if (!currentUser) {
+    alert('Войди чтобы писать в чат');
+    return;
+  }
+  if (userName === currentUser) {
+    alert('Нельзя писать себе');
+    return;
+  }
+  
+  currentChatUserId = userId;
+  document.getElementById('chatTitle').textContent = 'Чат с @' + userName;
+  document.getElementById('chatModal').style.display = 'flex';
+  document.getElementById('chatMessages').innerHTML = '<div class="loading"><span class="spinner"></span></div>';
+  
+  await loadChatMessages(userId);
+  
+  document.getElementById('chatInput').onkeydown = function(e) {
+    if (e.key === 'Enter') sendChatMessage();
+  };
+}
+
+function closeChat() {
+  document.getElementById('chatModal').style.display = 'none';
+  currentChatUserId = null;
+}
+
+async function loadChatMessages(userId) {
+  try {
+    const res = await fetch('/api/chats/open', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({user_id: userId})
+    });
+    const data = await res.json();
+    if (data.error) {
+      document.getElementById('chatMessages').innerHTML = '<div style="color:var(--red);">' + data.error + '</div>';
+      return;
+    }
+    
+    const chatId = data.chat_id;
+    const msgRes = await fetch('/api/chats/' + chatId + '/messages');
+    const msgData = await msgRes.json();
+    
+    const container = document.getElementById('chatMessages');
+    container.innerHTML = '';
+    
+    if (!msgData.items || msgData.items.length === 0) {
+      container.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:40px;">Начни разговор!</div>';
+      return;
+    }
+    
+    for (const msg of msgData.items) {
+      const div = document.createElement('div');
+      div.className = 'chat-message ' + (msg.sender_id === data.my_id ? 'mine' : 'other');
+      div.innerHTML = '<div class="msg-author">@' + msg.sender_name + '</div><div class="msg-text">' + msg.text + '</div>';
+      container.appendChild(div);
+    }
+    
+    container.scrollTop = container.scrollHeight;
+  } catch(e) {
+    document.getElementById('chatMessages').innerHTML = '<div style="color:var(--red);">Ошибка загрузки</div>';
+  }
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || !currentChatUserId) return;
+  
+  try {
+    const res = await fetch('/api/chats/' + currentChatUserId + '/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text: text})
+    });
+    const data = await res.json();
+    if (data.error) {
+      alert(data.error);
+      return;
+    }
+    input.value = '';
+    await loadChatMessages(currentChatUserId);
+  } catch(e) {
+    alert('Ошибка отправки');
+  }
+}
+
 // ========== SEARCH ==========
 let searchTimer;
 document.getElementById('searchInput').addEventListener('input', function(e) {
@@ -892,36 +1152,19 @@ function logout() {
 }
 
 // ========== EASTER EGGS ==========
-let clickCount = 0;
-let lastClickTime = 0;
-const konamiCode = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
-let konamiIndex = 0;
+let titleClicks = 0;
+let lastTitleClick = 0;
 
 document.getElementById('siteTitle').addEventListener('click', function() {
-  clickCount++;
+  titleClicks++;
   const now = Date.now();
-  if (now - lastClickTime > 2000) clickCount = 1;
-  lastClickTime = now;
+  if (now - lastTitleClick > 2000) titleClicks = 1;
+  lastTitleClick = now;
   
-  if (clickCount === 5) {
-    showEasterEgg('🎃', 'Секретный режим активирован!');
+  if (titleClicks === 5) {
+    showEasterEgg('🎃', 'Секретный режим!');
     document.body.style.filter = 'hue-rotate(180deg)';
     setTimeout(() => document.body.style.filter = '', 5000);
-  }
-});
-
-document.addEventListener('keydown', function(e) {
-  if (e.key === konamiCode[konamiIndex]) {
-    konamiIndex++;
-    if (konamiIndex === konamiCode.length) {
-      showEasterEgg('👻', 'Konami Code! +100 жизней!');
-      for (let i = 0; i < 50; i++) {
-        setTimeout(() => spawnParticles(Math.random() * window.innerWidth, Math.random() * window.innerHeight), i * 50);
-      }
-      konamiIndex = 0;
-    }
-  } else {
-    konamiIndex = 0;
   }
 });
 
