@@ -321,11 +321,11 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
   </div>
   <div id="page-streams" class="page">
     <div class="scroll-reveal">
-      <h2 style="color:var(--orange);font-size:32px;font-weight:800;margin-bottom:20px;">📺 Стримы</h2>
+      <h2 style="color:var(--orange);font-size:32px;font-weight:800;margin-bottom:20px;"> Стримы</h2>
     </div>
     <div class="bento-grid scroll-reveal">
       <div class="bento-item bento-large">
-        <div style="font-size:48px;margin-bottom:10px;">🔴</div>
+        <div style="font-size:48px;margin-bottom:10px;"></div>
         <div style="font-size:24px;font-weight:800;">LIVE</div>
         <div style="color:var(--text-dim);margin-top:8px;">Сейчас в эфире</div>
         <div id="liveCount" style="font-size:36px;font-weight:900;color:var(--red);margin-top:10px;">0</div>
@@ -380,7 +380,7 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
 </div>
 <div id="editProfileModal" class="modal">
   <div class="modal-box">
-    <h3>✏️ Редактировать</h3>
+    <h3>️ Редактировать</h3>
     <label style="font-size:12px;color:var(--text-dim);">Имя</label>
     <input type="text" id="editDisplayName" maxlength="50">
     <label style="font-size:12px;color:var(--text-dim);">Ник (латиница, _)</label>
@@ -393,11 +393,12 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
 </div>
 <div id="streamModal" class="modal">
   <div class="modal-box">
-    <h3>📺 Начать стрим</h3>
+    <h3> Начать стрим</h3>
     <input type="text" id="streamTitle" placeholder="Название">
     <textarea id="streamDesc" rows="2" placeholder="Описание"></textarea>
-    <input type="text" id="streamUrl" placeholder="URL (YouTube embed)">
+    <input type="text" id="streamUrl" placeholder="YouTube ссылка (любая)">
     <input type="text" id="streamThumb" placeholder="Превью (URL картинки)">
+    <div style="font-size:11px;color:var(--text-dim);margin:8px 0;">💡 Вставь обычную ссылку YouTube — конвертируется автоматически</div>
     <button class="btn" id="createStreamBtn">Запустить</button>
     <button class="btn btn-secondary" id="closeStreamBtn">Отмена</button>
   </div>
@@ -407,15 +408,14 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
   'use strict';
   const ADMIN_NICK = 'vrema7760-cyber';
   let currentUser = null;
-  let currentProfile = null;
+  let myProfileData = null;
   let currentChatId = null;
   let currentPage = 'feed';
   const canvas = document.getElementById('particleCanvas');
   const ctx = canvas.getContext('2d');
   let particles = [];
   function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-  window.addEventListener('resize', resizeCanvas);
-  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas); resizeCanvas();
   function spawnParticles(x, y) {
     for (let i = 0; i < 15; i++) {
       particles.push({
@@ -438,13 +438,10 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
       ctx.fillStyle = p.color;
       ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
     }
-    ctx.globalAlpha = 1;
-    requestAnimationFrame(animateParticles);
+    ctx.globalAlpha = 1; requestAnimationFrame(animateParticles);
   }
   animateParticles();
-  document.addEventListener('pointerdown', e => {
-    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') spawnParticles(e.clientX, e.clientY);
-  });
+  document.addEventListener('pointerdown', e => { if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') spawnParticles(e.clientX, e.clientY); });
   const cursor = document.getElementById('magneticCursor');
   let cursorX = 0, cursorY = 0, targetX = 0, targetY = 0;
   if (window.matchMedia('(pointer: fine)').matches) {
@@ -494,6 +491,8 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
       if (res.ok) {
         currentUser = await res.json();
         document.getElementById('authArea').innerHTML = '<span style="color:var(--orange);font-weight:700;">@'+currentUser.name+'</span>';
+        const pRes = await fetch('/api/profile/me');
+        if (pRes.ok) myProfileData = await pRes.json();
       } else {
         document.getElementById('authArea').innerHTML = '<a href="/auth/github" style="color:var(--orange);text-decoration:none;">Войти</a>';
       }
@@ -512,7 +511,7 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
       const data = await res.json();
       feed.innerHTML = '';
       if (!data.items || data.items.length === 0) {
-        feed.innerHTML = '<div class="scroll-reveal" style="text-align:center;padding:60px;"><div style="font-size:64px;margin-bottom:16px;"></div><div style="font-size:18px;">Пока пусто. Будь первым!</div></div>';
+        feed.innerHTML = '<div class="scroll-reveal" style="text-align:center;padding:60px;"><div style="font-size:64px;margin-bottom:16px;">👻</div><div style="font-size:18px;">Пока пусто. Будь первым!</div></div>';
         setTimeout(observeElements, 100);
         return;
       }
@@ -544,7 +543,7 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
     html += '</div>';
     html += '<div class="actions">';
     html += '<button class="action-btn like-btn" data-id="'+item.id+'">❤️ <span class="like-count">'+(item.likes_count||0)+'</span></button>';
-    html += '<button class="action-btn save-btn" data-id="'+item.id+'"> '+(item.saves_count||0)+'</button>';
+    html += '<button class="action-btn save-btn" data-id="'+item.id+'">🔖 '+(item.saves_count||0)+'</button>';
     html += '<span class="action-btn">💬 '+(item.comments_count||0)+'</span>';
     html += '</div>';
     html += '<div class="comments" id="comments-'+item.id+'"></div>';
@@ -610,6 +609,23 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
     input.value = '';
     loadComments(id);
   }
+  // Конвертация YouTube ссылок в embed
+  function convertToEmbedUrl(url) {
+    if (!url) return url;
+    // Уже embed
+    if (url.includes('/embed/')) return url;
+    // Обычная ссылка youtube.com/watch?v=ID
+    let match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+    if (match) {
+      return 'https://www.youtube.com/embed/' + match[1] + '?autoplay=1&mute=1';
+    }
+    // Twitch
+    match = url.match(/twitch\.tv\/([a-zA-Z0-9_]+)/);
+    if (match) {
+      return 'https://player.twitch.tv/?channel=' + match[1] + '&parent=' + window.location.hostname;
+    }
+    return url;
+  }
   async function loadStreams() {
     const scroll = document.getElementById('streamsScroll');
     if (!scroll) return;
@@ -632,6 +648,7 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
       data.items.forEach(s => {
         const div = document.createElement('div');
         div.className = 'horizontal-scroll-item';
+        const embedUrl = convertToEmbedUrl(s.stream_url);
         const thumb = document.createElement('div');
         thumb.className = 'thumb';
         if (s.thumbnail_url) {
@@ -660,6 +677,18 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
         author.textContent = '@' + (s.author_name || 'anon');
         author.addEventListener('click', () => viewProfile(s.user_id, s.author_name));
         info.appendChild(author);
+        // Кнопка "Смотреть"
+        const watchBtn = document.createElement('button');
+        watchBtn.className = 'btn';
+        watchBtn.style.cssText = 'width:100%;margin-top:8px;padding:8px;font-size:13px;';
+        watchBtn.textContent = '▶️ Смотреть';
+        watchBtn.addEventListener('click', () => {
+          const modal = document.createElement('div');
+          modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
+          modal.innerHTML = '<div style="width:100%;max-width:800px;aspect-ratio:16/9;position:relative;"><iframe src="'+embedUrl+'" style="width:100%;height:100%;border:none;border-radius:12px;" allowfullscreen allow="autoplay; encrypted-media"></iframe><button style="position:absolute;top:-40px;right:0;background:var(--red);color:white;border:none;padding:8px 16px;border-radius:20px;cursor:pointer;font-size:14px;" onclick="this.parentElement.parentElement.remove()">✕ Закрыть</button></div>';
+          document.body.appendChild(modal);
+        });
+        info.appendChild(watchBtn);
         div.appendChild(info);
         scroll.appendChild(div);
       });
@@ -674,7 +703,8 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
     const url = document.getElementById('streamUrl').value.trim();
     const thumb = document.getElementById('streamThumb').value.trim();
     if (!title || !url) { alert('Название и URL обязательны'); return; }
-    const res = await fetch('/api/streams', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title, description:desc, stream_url:url, thumbnail_url:thumb})});
+    const embedUrl = convertToEmbedUrl(url);
+    const res = await fetch('/api/streams', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title, description:desc, stream_url:embedUrl, thumbnail_url:thumb})});
     const data = await res.json();
     if (data.ok) {
       closeModal('streamModal');
@@ -774,90 +804,83 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
       if (el) el.innerHTML = '<div style="text-align:center;padding:40px;">Войди чтобы увидеть профиль</div>';
       return;
     }
-    await showProfile(currentUser.id, currentUser.name, true);
+    const res = await fetch('/api/profile/me');
+    if (res.ok) {
+      myProfileData = await res.json();
+      renderProfilePage(myProfileData, true);
+    }
   }
   async function viewProfile(userId, userName) {
     navigate('profile');
-    await showProfile(userId, userName, false);
-  }
-  async function showProfile(userId, userName, isMe) {
     const el = document.getElementById('profileContent');
-    if (!el) return;
     el.innerHTML = '<div style="text-align:center;padding:40px;">Загрузка...</div>';
     try {
-      const url = isMe ? '/api/profile/me' : '/api/profile/'+userId;
-      const res = await fetch(url);
+      const res = await fetch('/api/profile/' + userId);
       const p = await res.json();
-      if (p.error) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);"> '+p.error+'</div>'; return; }
-      currentProfile = p;
-      const header = document.createElement('div');
-      header.className = 'scroll-reveal';
-      const profileHeader = document.createElement('div');
-      profileHeader.className = 'profile-header';
-      const avatar = document.createElement('div');
-      avatar.className = 'profile-avatar';
-      avatar.textContent = '👻';
-      profileHeader.appendChild(avatar);
-      const name = document.createElement('div');
-      name.className = 'profile-name';
-      name.textContent = p.display_name || p.username;
-      profileHeader.appendChild(name);
-      const username = document.createElement('div');
-      username.className = 'profile-username';
-      username.textContent = '@' + p.username;
-      profileHeader.appendChild(username);
-      const bio = document.createElement('div');
-      bio.className = 'profile-bio';
-      bio.textContent = p.bio || 'Нет описания';
-      profileHeader.appendChild(bio);
-      const actionsDiv = document.createElement('div');
-      actionsDiv.style.cssText = 'display:flex;gap:10px;justify-content:center;';
-      if (p.is_me) {
-        const editBtn = document.createElement('button');
-        editBtn.className = 'btn';
-        editBtn.textContent = '✏️ Редактировать';
-        editBtn.addEventListener('click', () => openEditProfile());
-        actionsDiv.appendChild(editBtn);
-      } else {
-        const chatBtn = document.createElement('button');
-        chatBtn.className = 'btn';
-        chatBtn.textContent = ' Написать';
-        chatBtn.addEventListener('click', () => openChatWith(p.user_id, p.username, null));
-        actionsDiv.appendChild(chatBtn);
-      }
-      profileHeader.appendChild(actionsDiv);
-      header.appendChild(profileHeader);
-      el.appendChild(header);
-      const bentoGrid = document.createElement('div');
-      bentoGrid.className = 'bento-grid scroll-reveal';
-      const largeItem = document.createElement('div');
-      largeItem.className = 'bento-item bento-large';
-      largeItem.innerHTML = '<div style="font-size:48px;margin-bottom:10px;">📷</div><div style="font-size:32px;font-weight:900;color:var(--orange);">'+p.media_count+'</div><div style="color:var(--text-dim);margin-top:8px;">Постов</div>';
-      bentoGrid.appendChild(largeItem);
-      const streamItem = document.createElement('div');
-      streamItem.className = 'bento-item';
-      streamItem.innerHTML = '<div style="font-size:32px;">📺</div><div style="font-size:24px;font-weight:800;color:var(--orange);margin-top:8px;">'+p.streams_count+'</div><div style="color:var(--text-dim);font-size:12px;">Стримов</div>';
-      bentoGrid.appendChild(streamItem);
-      const dateItem = document.createElement('div');
-      dateItem.className = 'bento-item';
-      dateItem.innerHTML = '<div style="font-size:32px;">📅</div><div style="font-size:14px;font-weight:700;color:var(--orange);margin-top:8px;">'+new Date(p.created_at).toLocaleDateString('ru-RU')+'</div><div style="color:var(--text-dim);font-size:12px;">С нами с</div>';
-      bentoGrid.appendChild(dateItem);
-      el.appendChild(bentoGrid);
-      const contentSection = document.createElement('div');
-      contentSection.className = 'scroll-reveal';
-      const h3 = document.createElement('h3');
-      h3.style.cssText = 'color:var(--orange);margin:20px 0 12px;';
-      h3.textContent = '📷 Контент';
-      contentSection.appendChild(h3);
-      const mediaDiv = document.createElement('div');
-      mediaDiv.id = 'profileMedia';
-      contentSection.appendChild(mediaDiv);
-      el.appendChild(contentSection);
-      loadProfileMedia(p.user_id);
-      setTimeout(observeElements, 100);
-    } catch(e) {
-      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);">Ошибка</div>';
+      if (p.error) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);">❌ '+p.error+'</div>'; return; }
+      renderProfilePage(p, false);
+    } catch(e) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);">Ошибка</div>'; }
+  }
+  function renderProfilePage(p, isMe) {
+    const el = document.getElementById('profileContent');
+    const header = document.createElement('div');
+    header.className = 'profile-header';
+    const avatar = document.createElement('div');
+    avatar.className = 'profile-avatar';
+    avatar.textContent = '';
+    header.appendChild(avatar);
+    const name = document.createElement('div');
+    name.className = 'profile-name';
+    name.textContent = p.display_name || p.username;
+    header.appendChild(name);
+    const username = document.createElement('div');
+    username.className = 'profile-username';
+    username.textContent = '@' + p.username;
+    header.appendChild(username);
+    const bio = document.createElement('div');
+    bio.className = 'profile-bio';
+    bio.textContent = p.bio || 'Нет описания';
+    header.appendChild(bio);
+    const actionsDiv = document.createElement('div');
+    actionsDiv.style.cssText = 'display:flex;gap:10px;justify-content:center;';
+    if (isMe) {
+      const editBtn = document.createElement('button');
+      editBtn.className = 'btn';
+      editBtn.textContent = '✏️ Редактировать';
+      editBtn.addEventListener('click', openEditProfile);
+      actionsDiv.appendChild(editBtn);
+    } else {
+      const chatBtn = document.createElement('button');
+      chatBtn.className = 'btn';
+      chatBtn.textContent = '💬 Написать';
+      chatBtn.addEventListener('click', () => openChatWith(p.user_id, p.username, null));
+      actionsDiv.appendChild(chatBtn);
+      const followBtn = document.createElement('button');
+      followBtn.className = 'btn btn-follow';
+      followBtn.textContent = '➕ Подписаться';
+      followBtn.addEventListener('click', async () => {
+        try {
+          const res = await fetch('/api/follow/' + p.user_id, {method:'POST'});
+          const data = await res.json();
+          if (data.ok) {
+            followBtn.textContent = data.following ? '✅ Отписаться' : ' Подписаться';
+            followBtn.className = 'btn ' + (data.following ? 'btn-secondary' : 'btn-follow');
+          }
+        } catch(e) { alert('Ошибка'); }
+      });
+      actionsDiv.appendChild(followBtn);
     }
+    header.appendChild(actionsDiv);
+    el.innerHTML = '';
+    el.appendChild(header);
+    const stats = document.createElement('div');
+    stats.className = 'profile-stats';
+    stats.innerHTML = '<div><div class="stat-val">'+p.media_count+'</div><div class="stat-lbl">Постов</div></div><div><div class="stat-val">'+p.streams_count+'</div><div class="stat-lbl">Стримов</div></div>';
+    el.appendChild(stats);
+    const contentSection = document.createElement('div');
+    contentSection.innerHTML = '<h3 style="color:var(--orange);margin:20px 0 12px;">📷 Контент</h3><div id="profileMedia"></div>';
+    el.appendChild(contentSection);
+    loadProfileMedia(p.user_id);
   }
   async function loadProfileMedia(userId) {
     const el = document.getElementById('profileMedia');
@@ -865,20 +888,16 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
     try {
       const res = await fetch('/api/feed?user_id='+userId);
       const data = await res.json();
-      if (!data.items || data.items.length === 0) {
-        el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim);">Контента пока нет</div>';
-        return;
-      }
+      if (!data.items || data.items.length === 0) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim);">Контента пока нет</div>'; return; }
       el.innerHTML = '';
       data.items.forEach(item => el.appendChild(renderCard(item)));
-      setTimeout(observeElements, 100);
     } catch(e){}
   }
   function openEditProfile() {
-    if (!currentProfile) return;
-    document.getElementById('editDisplayName').value = currentProfile.display_name || '';
-    document.getElementById('editUsername').value = currentProfile.username || '';
-    document.getElementById('editBio').value = currentProfile.bio || '';
+    if (!myProfileData) return;
+    document.getElementById('editDisplayName').value = myProfileData.display_name || '';
+    document.getElementById('editUsername').value = myProfileData.username || '';
+    document.getElementById('editBio').value = myProfileData.bio || '';
     openModal('editProfileModal');
   }
   document.getElementById('saveProfileBtn').addEventListener('click', async () => {
@@ -889,11 +908,12 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
       const res1 = await fetch('/api/profile/update', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({display_name:displayName, bio})});
       const d1 = await res1.json();
       if (!d1.ok) { alert('Ошибка профиля: '+d1.error); return; }
-      if (username && username !== currentProfile.username) {
+      if (username && username !== myProfileData.username) {
         const res2 = await fetch('/api/profile/username', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username})});
         const d2 = await res2.json();
         if (!d2.ok) { alert('Ошибка ника: '+d2.error); return; }
-        currentUser.name = d2.new_username;
+        myProfileData.username = d2.new_username;
+        if (currentUser) currentUser.name = d2.new_username;
       }
       closeModal('editProfileModal');
       loadMyProfile();
@@ -911,10 +931,7 @@ header input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--pu
       const feed = document.getElementById('feed');
       if (!feed) return;
       feed.innerHTML = '';
-      if (!data.media || data.media.length === 0) {
-        feed.innerHTML = '<div style="text-align:center;padding:60px;">Ничего не найдено</div>';
-        return;
-      }
+      if (!data.media || data.media.length === 0) { feed.innerHTML = '<div style="text-align:center;padding:60px;">Ничего не найдено</div>'; return; }
       data.media.forEach(item => feed.appendChild(renderCard(item)));
     }, 400);
   });
