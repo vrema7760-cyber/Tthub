@@ -193,3 +193,49 @@ export async function handleEndStream(request, env, streamId) {
   await env.DB.prepare('UPDATE streams SET is_live = 0 WHERE id = ?').bind(streamId).run();
   return json({ ok: true });
                }
+export async function handleFollow(request, env, targetUserId) {
+  const user = await requireUser(request, env);
+  if (!user) return json({ error: 'unauthorized' }, 401);
+  if (user.id === targetUserId) return json({ error: 'cannot_follow_self' }, 400);
+
+  const target = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(targetUserId).first();
+  if (!target) return json({ error: 'user_not_found' }, 404);
+
+  const existing = await env.DB.prepare('SELECT * FROM follows WHERE follower_id = ? AND following_id = ?').bind(user.id, targetUserId).first();
+  if (existing) {
+    await env.DB.prepare('DELETE FROM follows WHERE follower_id = ? AND following_id = ?').bind(user.id, targetUserId).run();
+    return json({ ok: true, following: false });
+  }
+
+  await env.DB.prepare('INSERT INTO follows (follower_id, following_id, created_at) VALUES (?, ?, ?)').bind(user.id, targetUserId, Date.now()).run();
+  return json({ ok: true, following: true });
+}
+
+export async function handleGetFollowStatus(request, env, targetUserId) {
+  const user = await requireUser(request, env);
+  if (!user) return json({ error: 'unauthorized' }, 401);
+
+  const follow = await env.DB.prepare('SELECT * FROM follows WHERE follower_id = ? AND following_id = ?').bind(user.id, targetUserId).first();
+  const followersCount = await env.DB.prepare('SELECT COUNT(*) as c FROM follows WHERE following_id = ?').bind(targetUserId).first();
+  const followingCount = await env.DB.prepare('SELECT COUNT(*) as c FROM follows WHERE follower_id = ?').bind(targetUserId).first();
+
+  return json({
+    following: !!follow,
+    followers_count: followersCount.c,
+    following_count: followingCount.c
+  });
+}
+
+export async function handleGetFollowers(request, env, userId) {
+  const { results } = await env.DB.prepare(
+    'SELECT u.id, u.name, u.avatar_url, p.display_name, p.profile_emoji FROM follows f JOIN users u ON u.id = f.follower_id LEFT JOIN user_profiles p ON p.user_id = f.follower_id WHERE f.following_id = ? ORDER BY f.created_at DESC'
+  ).bind(userId).all();
+  return json({ items: results });
+}
+
+export async function handleGetFollowing(request, env, userId) {
+  const { results } = await env.DB.prepare(
+    'SELECT u.id, u.name, u.avatar_url, p.display_name, p.profile_emoji FROM follows f JOIN users u ON u.id = f.following_id LEFT JOIN user_profiles p ON p.user_id = f.following_id WHERE f.follower_id = ? ORDER BY f.created_at DESC'
+  ).bind(userId).all();
+  return json({ items: results });
+}
