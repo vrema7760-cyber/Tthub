@@ -7,7 +7,8 @@ import { handleListChats, handleOpenChat, handleSendMessage, handleGetMessages }
 import { handleSearch } from './search.js';
 import {
   handleGetMyProfile, handleGetUserProfile, handleUpdateProfile, handleChangeUsername,
-  handleListStreams, handleCreateStream, handleDeleteStream, handleEndStream
+  handleListStreams, handleCreateStream, handleDeleteStream, handleEndStream,
+  handleFollow, handleGetFollowStatus, handleGetFollowers, handleGetFollowing
 } from './profile.js';
 
 export default {
@@ -36,6 +37,20 @@ export default {
       let m;
       if ((m = path.match(/^\/api\/profile\/([\w-]+)$/)) && request.method === 'GET') {
         return handleGetUserProfile(request, env, m[1]);
+      }
+      if ((m = path.match(/^\/api\/profile\/([\w-]+)\/followers$/)) && request.method === 'GET') {
+        return handleGetFollowers(request, env, m[1]);
+      }
+      if ((m = path.match(/^\/api\/profile\/([\w-]+)\/following$/)) && request.method === 'GET') {
+        return handleGetFollowing(request, env, m[1]);
+      }
+
+      // --- Follow ---
+      if ((m = path.match(/^\/api\/follow\/([\w-]+)$/)) && request.method === 'POST') {
+        return handleFollow(request, env, m[1]);
+      }
+      if ((m = path.match(/^\/api\/follow\/([\w-]+)\/status$/)) && request.method === 'GET') {
+        return handleGetFollowStatus(request, env, m[1]);
       }
 
       // --- Streams ---
