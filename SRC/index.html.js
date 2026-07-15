@@ -6,15 +6,14 @@ const INDEX_HTML = `<!DOCTYPE html>
 <meta name="theme-color" content="#0d0714">
 <title>SpookyTok</title>
 <style>
+  /* ===== БАЗОВЫЕ ПЕРЕМЕННЫЕ ===== */
   :root {
     --bg: #0d0714;
     --card: #1a0f26;
-    --card-hover: #231538;
     --orange: #ff7518;
     --orange-glow: rgba(255,117,24,0.4);
     --purple: #7b2ff7;
     --purple-glow: rgba(123,47,247,0.4);
-    --green: #6dff8f;
     --red: #ff4444;
     --text: #f3e9ff;
     --text-dim: #a89bb8;
@@ -23,8 +22,6 @@ const INDEX_HTML = `<!DOCTYPE html>
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  
-  html { scroll-behavior: smooth; }
   
   body {
     background: var(--bg);
@@ -68,76 +65,34 @@ const INDEX_HTML = `<!DOCTYPE html>
     z-index: 9999;
   }
 
-  /* ===== MAGNETIC CURSOR (Idea #4) ===== */
-  .magnetic-cursor {
-    position: fixed;
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--orange);
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 10000;
-    transform: translate(-50%, -50%);
-    transition: width 0.2s, height 0.2s, background 0.2s, border-color 0.2s;
-    mix-blend-mode: difference;
-    display: none;
-  }
+  /* ===== MAGNETIC CURSOR (Desktop only) ===== */
   @media (pointer: fine) {
-    .magnetic-cursor { display: block; }
-  }
-  .magnetic-cursor.hovering {
-    width: 60px;
-    height: 60px;
-    background: rgba(255,117,24,0.15);
-    border-color: var(--purple);
-  }
-  .magnetic-cursor.text-hover {
-    width: 100px;
-    height: 40px;
-    border-radius: 20px;
-    background: rgba(123,47,247,0.2);
-    border-color: var(--orange);
-  }
-
-  /* ===== 3D FLOATING OBJECT (Idea #5) ===== */
-  .scene-3d {
-    perspective: 1000px;
-    position: fixed;
-    top: 50%;
-    right: 5%;
-    transform: translateY(-50%);
-    z-index: 1;
-    pointer-events: none;
-    opacity: 0.15;
-  }
-  .floating-skull {
-    width: 120px;
-    height: 120px;
-    font-size: 100px;
-    text-align: center;
-    line-height: 120px;
-    transform-style: preserve-3d;
-    animation: float3d 8s ease-in-out infinite;
-    filter: drop-shadow(0 0 30px var(--purple-glow));
-  }
-  @keyframes float3d {
-    0%, 100% { transform: rotateY(0deg) rotateX(0deg) translateY(0); }
-    25% { transform: rotateY(90deg) rotateX(10deg) translateY(-20px); }
-    50% { transform: rotateY(180deg) rotateX(0deg) translateY(0); }
-    75% { transform: rotateY(270deg) rotateX(-10deg) translateY(-20px); }
-  }
-  @media (max-width: 1024px) {
-    .scene-3d { display: none; }
+    .magnetic-cursor {
+      position: fixed;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--orange);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 10000;
+      transform: translate(-50%, -50%);
+      transition: width 0.2s, height 0.2s, background 0.2s;
+      mix-blend-mode: difference;
+    }
+    .magnetic-cursor.hovering {
+      width: 50px;
+      height: 50px;
+      background: rgba(255,117,24,0.2);
+    }
   }
 
-  /* ===== HEADER ===== */
+  /* ===== LAYOUT ===== */
   header {
     position: sticky;
     top: 0;
     z-index: 100;
     background: rgba(13,7,20,0.9);
     backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
     padding: 12px 16px;
     display: flex;
@@ -153,7 +108,6 @@ const INDEX_HTML = `<!DOCTYPE html>
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     cursor: pointer;
-    white-space: nowrap;
   }
 
   header input {
@@ -166,41 +120,8 @@ const INDEX_HTML = `<!DOCTYPE html>
     padding: 8px 14px;
     font-size: 14px;
     outline: none;
-    transition: all 0.3s;
-  }
-  header input:focus {
-    border-color: var(--purple);
-    box-shadow: 0 0 0 3px var(--purple-glow);
   }
 
-  /* ===== KINETIC TYPOGRAPHY (Idea #3) ===== */
-  .kinetic-title {
-    font-size: clamp(48px, 12vw, 120px);
-    font-weight: 900;
-    line-height: 0.9;
-    letter-spacing: -0.03em;
-    background: linear-gradient(135deg, var(--orange) 0%, var(--purple) 50%, var(--orange) 100%);
-    background-size: 200% 200%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: gradientShift 5s ease infinite;
-    text-transform: uppercase;
-    margin-bottom: 20px;
-    user-select: none;
-  }
-  @keyframes gradientShift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-  }
-  .kinetic-word {
-    display: inline-block;
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-  .kinetic-word:hover {
-    transform: scale(1.1) rotate(-2deg);
-  }
-
-  /* ===== MAIN CONTENT ===== */
   .main-content {
     position: relative;
     z-index: 1;
@@ -210,151 +131,8 @@ const INDEX_HTML = `<!DOCTYPE html>
   }
 
   .page { display: none; }
-  .page.active { display: block; }
-
-  /* ===== SCROLLYTELLING (Idea #2) ===== */
-  .scroll-reveal {
-    opacity: 0;
-    transform: translateY(60px);
-    transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-  .scroll-reveal.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  .scroll-reveal.from-left {
-    transform: translateX(-60px);
-  }
-  .scroll-reveal.from-left.visible {
-    transform: translateX(0);
-  }
-  .scroll-reveal.from-right {
-    transform: translateX(60px);
-  }
-  .scroll-reveal.from-right.visible {
-    transform: translateX(0);
-  }
-  .scroll-reveal.scale {
-    transform: scale(0.8);
-  }
-  .scroll-reveal.scale.visible {
-    transform: scale(1);
-  }
-
-  /* ===== BENTO GRID (Idea #1) ===== */
-  .bento-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    grid-auto-rows: minmax(140px, auto);
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-  .bento-item {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 20px;
-    overflow: hidden;
-    position: relative;
-    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    cursor: pointer;
-  }
-  .bento-item:hover {
-    transform: translateY(-4px) scale(1.02);
-    border-color: var(--purple);
-    box-shadow: 0 12px 40px rgba(123,47,247,0.3);
-  }
-  .bento-item::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, transparent 0%, rgba(255,117,24,0.1) 100%);
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-  .bento-item:hover::before { opacity: 1; }
-  
-  .bento-large { grid-column: span 2; grid-row: span 2; }
-  .bento-wide { grid-column: span 2; }
-  .bento-tall { grid-row: span 2; }
-  
-  @media (max-width: 768px) {
-    .bento-grid { grid-template-columns: repeat(2, 1fr); }
-    .bento-large { grid-column: span 2; grid-row: span 1; }
-    .bento-wide { grid-column: span 2; }
-    .bento-tall { grid-row: span 1; }
-  }
-  @media (max-width: 480px) {
-    .bento-grid { grid-template-columns: 1fr; }
-    .bento-large, .bento-wide { grid-column: span 1; }
-  }
-
-  /* ===== HORIZONTAL SCROLL (Idea #7) ===== */
-  .horizontal-scroll-section {
-    margin: 40px 0;
-  }
-  .horizontal-scroll-section h2 {
-    font-size: 28px;
-    font-weight: 800;
-    margin-bottom: 20px;
-    color: var(--orange);
-  }
-  .horizontal-scroll {
-    display: flex;
-    gap: 16px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    padding: 10px 0 20px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--purple) var(--bg);
-  }
-  .horizontal-scroll::-webkit-scrollbar {
-    height: 6px;
-  }
-  .horizontal-scroll::-webkit-scrollbar-track {
-    background: var(--bg);
-    border-radius: 3px;
-  }
-  .horizontal-scroll::-webkit-scrollbar-thumb {
-    background: var(--purple);
-    border-radius: 3px;
-  }
-  .horizontal-scroll-item {
-    flex: 0 0 280px;
-    scroll-snap-align: start;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    overflow: hidden;
-    transition: all 0.3s;
-  }
-  .horizontal-scroll-item:hover {
-    transform: scale(1.03);
-    border-color: var(--purple);
-  }
-  .horizontal-scroll-item .thumb {
-    width: 100%;
-    aspect-ratio: 16/9;
-    background: #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 48px;
-  }
-  .horizontal-scroll-item .info {
-    padding: 14px;
-  }
-  .horizontal-scroll-item .title {
-    font-weight: 700;
-    margin-bottom: 6px;
-    font-size: 15px;
-  }
-  .horizontal-scroll-item .author {
-    color: var(--orange);
-    font-size: 13px;
-    cursor: pointer;
-  }
+  .page.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
   /* ===== BOTTOM NAV ===== */
   .bottom-nav {
@@ -365,7 +143,6 @@ const INDEX_HTML = `<!DOCTYPE html>
     height: var(--nav-height);
     background: rgba(13,7,20,0.95);
     backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
     border-top: 1px solid var(--border);
     display: flex;
     justify-content: space-around;
@@ -385,94 +162,34 @@ const INDEX_HTML = `<!DOCTYPE html>
     font-weight: 600;
     cursor: pointer;
     padding: 8px;
-    transition: all 0.3s;
+    transition: color 0.2s;
   }
-  .nav-item.active {
-    color: var(--orange);
-    transform: translateY(-4px);
-  }
+  .nav-item.active { color: var(--orange); }
   .nav-icon { font-size: 24px; }
 
-  /* ===== CARDS ===== */
-  .card {
+  /* ===== CARDS (Feed & Streams) ===== */
+  .card, .stream-card {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 20px;
-    margin-bottom: 24px;
+    border-radius: 16px;
+    margin-bottom: 20px;
     overflow: hidden;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    animation: fadeInUp 0.5s ease;
-    position: relative;
-    transition: all 0.3s;
-  }
-  @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(30px) scale(0.95); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  .card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 48px rgba(123,47,247,0.3);
-    border-color: var(--purple);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
   }
   .card-media { width: 100%; aspect-ratio: 9/16; background: #000; object-fit: cover; }
+  .stream-media { width: 100%; aspect-ratio: 16/9; background: #000; }
   .card-body { padding: 14px; }
-  .author {
-    color: var(--orange);
-    font-weight: 700;
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-block;
-  }
-  .author:hover {
-    text-decoration: underline;
-    text-shadow: 0 0 12px var(--orange-glow);
-  }
+  .author { color: var(--orange); font-weight: 700; cursor: pointer; text-decoration: none; }
+  .author:hover { text-decoration: underline; }
 
-  .actions {
-    display: flex;
-    gap: 16px;
-    padding: 10px 14px;
-    border-top: 1px solid var(--border);
-  }
-  .action-btn {
-    background: none;
-    border: none;
-    color: var(--text);
-    font-size: 16px;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 12px;
-    transition: all 0.2s;
-  }
-  .action-btn:hover { background: rgba(255,255,255,0.05); transform: scale(1.1); }
-  .action-btn:active { transform: scale(0.9); }
-  .action-btn.liked { animation: likePulse 0.4s ease; }
-  @keyframes likePulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.4); }
-    100% { transform: scale(1); }
-  }
-
-  .comments { padding: 12px 14px; font-size: 14px; color: var(--text-dim); }
-  .comments b { color: var(--orange); }
-  .comment-input { display: flex; gap: 8px; padding: 12px 14px 16px; }
-  .comment-input input {
-    flex: 1;
-    border-radius: 20px;
-    border: 2px solid var(--border);
-    background: var(--bg);
-    color: var(--text);
-    padding: 10px 16px;
-    font-size: 14px;
-    outline: none;
-  }
-  .comment-input input:focus { border-color: var(--purple); }
+  .actions { display: flex; gap: 16px; padding: 10px 14px; border-top: 1px solid var(--border); }
+  .action-btn { background: none; border: none; color: var(--text); font-size: 16px; cursor: pointer; }
 
   /* ===== PROFILE ===== */
   .profile-header {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 20px;
+    border-radius: 16px;
     padding: 24px;
     text-align: center;
     margin-bottom: 20px;
@@ -480,10 +197,7 @@ const INDEX_HTML = `<!DOCTYPE html>
   .profile-avatar {
     width: 100px; height: 100px; border-radius: 50%;
     background: linear-gradient(135deg, var(--purple), var(--orange));
-    margin: 0 auto 16px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 48px;
-    box-shadow: 0 0 30px var(--purple-glow);
+    margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 48px;
   }
   .profile-name { font-size: 24px; font-weight: 800; color: var(--orange); }
   .profile-username { color: var(--text-dim); margin-bottom: 12px; }
@@ -494,133 +208,82 @@ const INDEX_HTML = `<!DOCTYPE html>
 
   /* ===== CHATS ===== */
   .chat-list-item {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 14px;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    transition: all 0.3s;
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer;
   }
-  .chat-list-item:hover {
-    border-color: var(--purple);
-    transform: translateX(4px);
-  }
-  .chat-avatar {
-    width: 44px; height: 44px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--purple), var(--orange));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px; flex-shrink: 0;
-  }
+  .chat-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--purple); display: flex; align-items: center; justify-content: center; font-size: 20px; }
   .chat-info { flex: 1; }
   .chat-name { font-weight: 700; color: var(--orange); }
   .chat-preview { font-size: 13px; color: var(--text-dim); }
 
-  .chat-view {
-    display: flex; flex-direction: column;
-    height: 70vh;
-    background: var(--card);
-    border-radius: 16px;
-    overflow: hidden;
-  }
+  .chat-view { display: flex; flex-direction: column; height: 70vh; background: var(--card); border-radius: 16px; overflow: hidden; }
   .chat-messages { flex: 1; overflow-y: auto; padding: 16px; }
-  .msg {
-    padding: 10px 14px;
-    border-radius: 16px;
-    margin-bottom: 8px;
-    max-width: 75%;
-    word-wrap: break-word;
-    animation: msgSlide 0.3s ease;
-  }
-  @keyframes msgSlide {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .msg.mine {
-    background: linear-gradient(135deg, var(--purple), var(--orange));
-    color: white;
-    margin-left: auto;
-    border-bottom-right-radius: 4px;
-  }
-  .msg.other {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-bottom-left-radius: 4px;
-  }
+  .msg { padding: 10px 14px; border-radius: 16px; margin-bottom: 8px; max-width: 75%; word-wrap: break-word; }
+  .msg.mine { background: var(--purple); color: white; margin-left: auto; border-bottom-right-radius: 4px; }
+  .msg.other { background: var(--bg); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
   .chat-input-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
-  .chat-input-row input {
-    flex: 1;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 20px;
-    padding: 10px 16px;
-    outline: none;
-  }
+  .chat-input-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 20px; padding: 10px 16px; outline: none; }
 
   /* ===== MODALS ===== */
   .modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.8);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 200;
-    padding: 20px;
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px;
   }
   .modal.active { display: flex; }
   .modal-box {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 24px;
-    width: 100%;
-    max-width: 440px;
-    max-height: 90vh;
-    overflow-y: auto;
-    animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-  @keyframes modalPop {
-    from { opacity: 0; transform: scale(0.8) translateY(30px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
+    background: var(--card); border: 1px solid var(--border); border-radius: 20px;
+    padding: 24px; width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto;
   }
   .modal-box h3 { color: var(--orange); margin-bottom: 16px; }
   .modal-box input, .modal-box textarea {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 12px;
-    padding: 12px;
-    margin-bottom: 12px;
-    font-size: 14px;
-    outline: none;
-    font-family: inherit;
+    width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    border-radius: 12px; padding: 12px; margin-bottom: 12px; font-size: 14px; outline: none;
   }
   .modal-box input:focus, .modal-box textarea:focus { border-color: var(--purple); }
   .btn {
-    background: linear-gradient(135deg, var(--purple), var(--orange));
-    color: white;
-    border: none;
-    padding: 12px 20px;
-    border-radius: 24px;
-    font-weight: 600;
-    cursor: pointer;
-    width: 100%;
-    margin-top: 8px;
-    transition: all 0.3s;
+    background: linear-gradient(135deg, var(--purple), var(--orange)); color: white; border: none;
+    padding: 12px 20px; border-radius: 24px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 8px;
   }
-  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(123,47,247,0.4); }
-  .btn:active { transform: scale(0.95); }
   .btn-secondary { background: #333; }
 
-  /* ===== RETRO MODE (кнопочные телефоны) ===== */
+  /* =========================================
+     АДАПТАЦИЯ ПОД УСТРОЙСТВА
+     ========================================= */
+  
+  /* Мобильные (до 600px) */
+  @media (max-width: 600px) {
+    header { padding: 10px 12px; }
+    header h1 { font-size: 18px; }
+    .main-content { padding: 12px; }
+    .profile-header { padding: 16px; }
+    .profile-name { font-size: 20px; }
+  }
+
+  /* Планшеты (600px - 1024px) */
+  @media (min-width: 600px) and (max-width: 1024px) {
+    .main-content { max-width: 800px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .card, .stream-card { margin-bottom: 0; }
+  }
+
+  /* ПК (1024px - 1920px) */
+  @media (min-width: 1024px) {
+    .main-content { max-width: 1000px; }
+    .magnetic-cursor { display: block; }
+  }
+
+  /* Телевизоры (1920px+) */
+  @media (min-width: 1920px) {
+    :root { --nav-height: 90px; }
+    body { font-size: 18px; }
+    header h1 { font-size: 32px; }
+    .nav-icon { font-size: 32px; }
+    .nav-item { font-size: 16px; }
+    .card-media { aspect-ratio: 16/9; }
+  }
+
+  /* =========================================
+     РЕТРО-РЕЖИМ ДЛЯ КНОПОЧНЫХ ТЕЛЕФОНОВ
+     ========================================= */
   body.retro-mode {
     background: #ffffff !important;
     color: #000000 !important;
@@ -629,63 +292,22 @@ const INDEX_HTML = `<!DOCTYPE html>
   }
   body.retro-mode .aurora-bg,
   body.retro-mode #particleCanvas,
-  body.retro-mode .magnetic-cursor,
-  body.retro-mode .scene-3d { display: none !important; }
+  body.retro-mode .magnetic-cursor { display: none !important; }
   body.retro-mode header { background: #000080; color: white; border-bottom: 2px solid #000; }
   body.retro-mode header h1 { background: none; -webkit-text-fill-color: white; font-size: 16px; }
   body.retro-mode header input { background: white; color: black; border: 1px solid #888; border-radius: 0; }
   body.retro-mode .main-content { padding: 5px; }
-  body.retro-mode .card,
-  body.retro-mode .profile-header,
-  body.retro-mode .chat-list-item,
-  body.retro-mode .chat-view,
-  body.retro-mode .modal-box,
-  body.retro-mode .bento-item,
-  body.retro-mode .horizontal-scroll-item {
-    background: #f0f0f0 !important;
-    color: black !important;
-    border: 2px solid #000 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
+  body.retro-mode .card, body.retro-mode .stream-card, body.retro-mode .profile-header, body.retro-mode .chat-list-item, body.retro-mode .chat-view, body.retro-mode .modal-box {
+    background: #f0f0f0 !important; color: black !important; border: 2px solid #000 !important; border-radius: 0 !important; box-shadow: none !important;
   }
-  body.retro-mode .author,
-  body.retro-mode .chat-name,
-  body.retro-mode .profile-name,
-  body.retro-mode .stat-val,
-  body.retro-mode .modal-box h3,
-  body.retro-mode .horizontal-scroll-section h2 {
-    color: #000080 !important;
-  }
+  body.retro-mode .author, body.retro-mode .chat-name, body.retro-mode .profile-name, body.retro-mode .stat-val, body.retro-mode .modal-box h3 { color: #000080 !important; }
   body.retro-mode .bottom-nav { background: #c0c0c0 !important; border-top: 2px solid #fff; height: 60px; }
   body.retro-mode .nav-item { color: black !important; font-size: 10px; }
-  body.retro-mode .btn {
-    background: #c0c0c0 !important;
-    color: black !important;
-    border: 2px outset #fff !important;
-    border-radius: 0 !important;
-  }
+  body.retro-mode .btn { background: #c0c0c0 !important; color: black !important; border: 2px outset #fff !important; border-radius: 0 !important; }
   body.retro-mode .btn:active { border-style: inset !important; }
   body.retro-mode .msg.mine { background: #ffffcc !important; color: black !important; border: 1px solid #000; }
   body.retro-mode .msg.other { background: #e0e0e0 !important; color: black !important; border: 1px solid #000; }
   body.retro-mode .modal { background: rgba(0,0,0,0.5) !important; backdrop-filter: none !important; }
-
-  /* ===== RESPONSIVE ===== */
-  @media (max-width: 600px) {
-    header { padding: 10px 12px; }
-    header h1 { font-size: 18px; }
-    .main-content { padding: 12px; }
-    .profile-header { padding: 16px; }
-    .profile-name { font-size: 20px; }
-    .kinetic-title { font-size: 48px; }
-  }
-  @media (min-width: 1920px) {
-    :root { --nav-height: 90px; }
-    body { font-size: 18px; }
-    header h1 { font-size: 32px; }
-    .nav-icon { font-size: 32px; }
-    .nav-item { font-size: 16px; }
-    .horizontal-scroll-item { flex: 0 0 360px; }
-  }
 </style>
 </head>
 <body>
@@ -699,15 +321,10 @@ const INDEX_HTML = `<!DOCTYPE html>
 <canvas id="particleCanvas"></canvas>
 <div class="magnetic-cursor" id="magneticCursor"></div>
 
-<!-- 3D объект (только на ПК) -->
-<div class="scene-3d">
-  <div class="floating-skull">💀</div>
-</div>
-
 <!-- Шапка -->
 <header>
   <h1 id="siteTitle"> SpookyTok</h1>
-  <input id="searchInput" placeholder="🔍 Поиск...">
+  <input id="searchInput" placeholder="Поиск...">
   <div id="authArea"></div>
 </header>
 
@@ -715,66 +332,26 @@ const INDEX_HTML = `<!DOCTYPE html>
 <div class="main-content">
   <!-- ЛЕНТА -->
   <div id="page-feed" class="page active">
-    <!-- Кинетическая типографика -->
-    <div class="scroll-reveal">
-      <div class="kinetic-title">
-        <span class="kinetic-word">Жуткие</span><br>
-        <span class="kinetic-word">Истории</span>
-      </div>
-    </div>
     <div id="feed"></div>
   </div>
   
-  <!-- СТРИМЫ (горизонтальный скролл + bento) -->
+  <!-- СТРИМЫ -->
   <div id="page-streams" class="page">
-    <div class="scroll-reveal">
-      <h2 style="color:var(--orange);font-size:32px;font-weight:800;margin-bottom:20px;">📺 Стримы</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2 style="color:var(--orange);">📺 Стримы</h2>
+      <button class="btn" style="width:auto;padding:8px 16px;" onclick="openModal('streamModal')" id="startStreamBtn">+ Стрим</button>
     </div>
-    
-    <!-- Bento Grid для статистики -->
-    <div class="bento-grid scroll-reveal">
-      <div class="bento-item bento-large">
-        <div style="font-size:48px;margin-bottom:10px;">🔴</div>
-        <div style="font-size:24px;font-weight:800;">LIVE</div>
-        <div style="color:var(--text-dim);margin-top:8px;">Сейчас в эфире</div>
-        <div id="liveCount" style="font-size:36px;font-weight:900;color:var(--red);margin-top:10px;">0</div>
-      </div>
-      <div class="bento-item">
-        <div style="font-size:32px;">️</div>
-        <div style="font-size:20px;font-weight:800;margin-top:8px;" id="totalViewers">0</div>
-        <div style="color:var(--text-dim);font-size:12px;">зрителей</div>
-      </div>
-      <div class="bento-item">
-        <div style="font-size:32px;">📡</div>
-        <div style="font-size:20px;font-weight:800;margin-top:8px;" id="totalStreams">0</div>
-        <div style="color:var(--text-dim);font-size:12px;">стримов</div>
-      </div>
-      <div class="bento-item bento-wide">
-        <div style="font-size:24px;font-weight:800;margin-bottom:10px;">🎯 Популярное</div>
-        <div style="color:var(--text-dim);font-size:13px;">Топ стримеры недели</div>
-        <div id="topStreamers" style="margin-top:12px;font-size:14px;"></div>
-      </div>
-    </div>
-
-    <!-- Горизонтальный скролл стримов -->
-    <div class="horizontal-scroll-section scroll-reveal">
-      <h2>🔥 Сейчас смотрят</h2>
-      <div class="horizontal-scroll" id="streamsScroll"></div>
-    </div>
-
-    <button class="btn" style="max-width:300px;margin:20px auto;display:block;" onclick="openModal('streamModal')" id="startStreamBtn">+ Начать стрим</button>
+    <div id="streamsList"></div>
   </div>
   
   <!-- ЧАТЫ -->
   <div id="page-chats" class="page">
-    <div class="scroll-reveal">
-      <h2 style="color:var(--orange);font-size:32px;font-weight:800;margin-bottom:20px;">💬 Чаты</h2>
-    </div>
+    <h2 style="color:var(--orange);margin-bottom:16px;">💬 Чаты</h2>
     <div id="chatsList"></div>
     <div id="chatViewContainer" style="display:none;"></div>
   </div>
   
-  <!-- ПРОФИЛЬ (Bento Grid) -->
+  <!-- ПРОФИЛЬ -->
   <div id="page-profile" class="page">
     <div id="profileContent"></div>
   </div>
@@ -815,11 +392,10 @@ const INDEX_HTML = `<!DOCTYPE html>
 
 <div id="streamModal" class="modal">
   <div class="modal-box">
-    <h3>📺 Начать стрим</h3>
+    <h3> Начать стрим</h3>
     <input type="text" id="streamTitle" placeholder="Название">
     <textarea id="streamDesc" rows="2" placeholder="Описание"></textarea>
     <input type="text" id="streamUrl" placeholder="URL (YouTube embed)">
-    <input type="text" id="streamThumb" placeholder="Превью (URL картинки)">
     <button class="btn" onclick="createStream()">Запустить</button>
     <button class="btn btn-secondary" onclick="closeModal('streamModal')">Отмена</button>
   </div>
@@ -847,14 +423,14 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 function spawnParticles(x, y) {
-  if (document.body.classList.contains('retro-mode')) return;
+  if (document.body.classList.contains('retro-mode')) return; // Отключаем на кнопочных
   for (let i = 0; i < 15; i++) {
     particles.push({
       x: x, y: y,
       vx: (Math.random() - 0.5) * 10,
       vy: (Math.random() - 0.5) * 10,
       life: 1,
-      color: ['#ff7518', '#7b2ff7', '#6dff8f', '#ff1493', '#00ffff'][Math.floor(Math.random() * 5)],
+      color: ['#ff7518', '#7b2ff7', '#6dff8f', '#ff1493'][Math.floor(Math.random() * 4)],
       size: Math.random() * 4 + 2
     });
   }
@@ -879,42 +455,17 @@ document.addEventListener('pointerdown', e => {
   if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') spawnParticles(e.clientX, e.clientY);
 });
 
-// ===== МАГНИТНЫЙ КУРСОР (Idea #4) =====
+// ===== МАГНИТНЫЙ КУРСОР =====
 const cursor = document.getElementById('magneticCursor');
-let cursorX = 0, cursorY = 0, targetX = 0, targetY = 0;
-
 if (window.matchMedia('(pointer: fine)').matches) {
   document.addEventListener('mousemove', e => {
-    targetX = e.clientX;
-    targetY = e.clientY;
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top = e.clientY + 'px';
   });
-  
-  function updateCursor() {
-    cursorX += (targetX - cursorX) * 0.15;
-    cursorY += (targetY - cursorY) * 0.15;
-    cursor.style.left = cursorX + 'px';
-    cursor.style.top = cursorY + 'px';
-    requestAnimationFrame(updateCursor);
-  }
-  updateCursor();
-  
-  document.querySelectorAll('button, a, .author, .chat-list-item, .bento-item, .horizontal-scroll-item').forEach(el => {
+  document.querySelectorAll('button, a, .author, .chat-list-item').forEach(el => {
     el.addEventListener('mouseenter', () => cursor.classList.add('hovering'));
     el.addEventListener('mouseleave', () => cursor.classList.remove('hovering'));
   });
-}
-
-// ===== SCROLLYTELLING (Idea #2) =====
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
-    }
-  });
-}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
-
-function observeElements() {
-  document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
 }
 
 // ===== НАВИГАЦИЯ =====
@@ -928,8 +479,6 @@ function navigate(page) {
   if (page === 'streams') loadStreams();
   if (page === 'chats') loadChats();
   if (page === 'profile') loadMyProfile();
-  
-  setTimeout(observeElements, 100);
 }
 
 document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('click', () => navigate(btn.dataset.page)));
@@ -950,162 +499,69 @@ async function init() {
     }
   } catch(e) {}
   loadFeed();
-  setTimeout(observeElements, 200);
 }
 
 // ===== ЛЕНТА =====
 async function loadFeed() {
   const feed = document.getElementById('feed');
   feed.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim);">Загрузка...</div>';
-  try {
-    const res = await fetch('/api/feed');
-    const data = await res.json();
-    feed.innerHTML = '';
-    if (!data.items || data.items.length === 0) {
-      feed.innerHTML = '<div class="scroll-reveal" style="text-align:center;padding:60px;"><div style="font-size:64px;margin-bottom:16px;"></div><div style="font-size:18px;">Пока пусто. Будь первым!</div></div>';
-      setTimeout(observeElements, 100);
-      return;
-    }
-    data.items.forEach((item, i) => {
-      const card = renderCard(item);
-      card.classList.add('scroll-reveal');
-      card.style.transitionDelay = (i * 0.1) + 's';
-      feed.appendChild(card);
-    });
-    setTimeout(observeElements, 100);
-  } catch(e) {
-    feed.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);">Ошибка загрузки</div>';
+  // Здесь должен быть fetch('/api/feed')
+  // Для превью:
+  feed.innerHTML = '<div style="text-align:center;padding:40px;">Лента пуста. Загрузи первое видео!</div>';
+}
+
+// ===== ПРОФИЛЬ =====
+async function loadMyProfile() {
+  if (!currentUser) {
+    document.getElementById('profileContent').innerHTML = '<div style="text-align:center;padding:40px;">Войди, чтобы увидеть профиль</div>';
+    return;
   }
+  await showProfile(currentUser.id, true);
 }
 
-function renderCard(item) {
-  const div = document.createElement('div');
-  div.className = 'card';
-  const canDelete = currentUser && (item.author_name === currentUser.name || currentUser.name === ADMIN_NICK);
-  const media = item.type === 'video' 
-    ? '<video class="card-media" src="/api/media/'+item.id+'/content" controls loop playsinline></video>'
-    : '<img class="card-media" src="/api/media/'+item.id+'/content" loading="lazy">';
-  div.innerHTML = 
-    (canDelete ? '<button class="btn" style="position:absolute;top:12px;right:12px;width:auto;padding:8px 14px;font-size:12px;z-index:10;background:var(--red);" onclick="deleteMedia(\\\''+item.id+'\\\')">🗑️</button>' : '') +
-    media +
-    '<div class="card-body">'+
-      '<a class="author" onclick="viewProfile(\\\''+item.user_id+'\\\',\\\''+item.author_name+'\\\')">@'+(item.author_name||'anon')+'</a>'+
-      '<div style="margin-top:6px;">'+(item.caption||'')+'</div>'+
+async function viewProfile(userId) {
+  navigate('profile');
+  await showProfile(userId, false);
+}
+
+async function showProfile(userId, isMe) {
+  const el = document.getElementById('profileContent');
+  el.innerHTML = '<div style="text-align:center;padding:40px;">Загрузка...</div>';
+  
+  // Здесь должен быть fetch('/api/profile/me') или '/api/profile/'+userId
+  // Мок для превью:
+  const p = { username: currentUser ? currentUser.name : 'user', display_name: 'Spooky User', bio: 'Люблю ужастики!', media_count: 12, streams_count: 2, is_me: isMe, user_id: userId };
+  currentProfile = p;
+  
+  const actions = p.is_me 
+    ? '<button class="btn" onclick="openModal(\'editProfileModal\')">✏️ Редактировать</button>'
+    : '<button class="btn" onclick="openChatWithUser(\\\''+p.user_id+'\\\',\\\''+p.username+'\\\')">💬 Написать</button>';
+  
+  el.innerHTML = 
+    '<div class="profile-header">'+
+      '<div class="profile-avatar">👻</div>'+
+      '<div class="profile-name">'+(p.display_name||p.username)+'</div>'+
+      '<div class="profile-username">@'+p.username+'</div>'+
+      '<div class="profile-bio">'+(p.bio||'')+'</div>'+
+      '<div class="profile-stats">'+
+        '<div><div class="stat-val">'+p.media_count+'</div><div class="stat-lbl">Постов</div></div>'+
+        '<div><div class="stat-val">'+p.streams_count+'</div><div class="stat-lbl">Стримов</div></div>'+
+      '</div>'+
+      '<div style="display:flex;gap:10px;justify-content:center;">'+actions+'</div>'+
     '</div>'+
-    '<div class="actions">'+
-      '<button class="action-btn" onclick="toggleLike(\\\''+item.id+'\\\',this)">❤️ <span class="like-count">'+(item.likes_count||0)+'</span></button>'+
-      '<button class="action-btn" onclick="toggleSave(\\\''+item.id+'\\\')">🔖 '+(item.saves_count||0)+'</button>'+
-      '<span class="action-btn">💬 '+(item.comments_count||0)+'</span>'+
-    '</div>'+
-    '<div class="comments" id="comments-'+item.id+'"></div>'+
-    '<div class="comment-input">'+
-      '<input placeholder="Комментарий..." onkeydown="if(event.key===\'Enter\')sendComment(\\\''+item.id+'\\\',this)">'+
-    '</div>';
-  loadComments(item.id);
-  return div;
+    '<h3 style="color:var(--orange);margin:20px 0 12px;">Контент</h3>'+
+    '<div style="text-align:center;color:var(--text-dim);">Здесь будут посты пользователя</div>';
 }
 
-async function toggleLike(id, el) {
-  const res = await fetch('/api/media/'+id+'/like', {method:'POST'});
-  const data = await res.json();
-  el.querySelector('.like-count').textContent = data.likes_count;
-  el.classList.add('liked');
-  setTimeout(() => el.classList.remove('liked'), 400);
-  spawnParticles(el.getBoundingClientRect().left + 20, el.getBoundingClientRect().top);
-}
-
-async function toggleSave(id) {
-  await fetch('/api/media/'+id+'/save', {method:'POST'});
-  alert('Сохранено!');
-}
-
-async function deleteMedia(id) {
-  if (!confirm('Удалить?')) return;
-  const res = await fetch('/api/media/'+id, {method:'DELETE'});
-  if (res.ok) loadFeed(); else alert('Ошибка');
-}
-
-async function loadComments(id) {
-  try {
-    const res = await fetch('/api/media/'+id+'/comments');
-    const data = await res.json();
-    const el = document.getElementById('comments-'+id);
-    if (!el) return;
-    if (!data.items || data.items.length === 0) {
-      el.innerHTML = '<div style="font-style:italic;">Нет комментариев</div>';
-      return;
-    }
-    el.innerHTML = data.items.map(c => '<div><b onclick="viewProfile(\\\''+c.user_id+'\\\',\\\''+c.author_name+'\\\')" style="cursor:pointer;">@'+c.author_name+'</b>: '+c.text+'</div>').join('');
-  } catch(e){}
-}
-
-async function sendComment(id, input) {
-  if (!currentUser) { alert('Войди сначала'); return; }
-  const text = input.value.trim();
-  if (!text) return;
-  await fetch('/api/media/'+id+'/comments', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text})});
-  input.value = '';
-  loadComments(id);
-}
-
-// ===== СТРИМЫ =====
-async function loadStreams() {
-  const scroll = document.getElementById('streamsScroll');
-  scroll.innerHTML = '<div style="padding:40px;color:var(--text-dim);">Загрузка...</div>';
-  try {
-    const res = await fetch('/api/streams');
-    const data = await res.json();
-    scroll.innerHTML = '';
-    
-    // Обновляем bento статистику
-    const liveCount = (data.items || []).filter(s => s.is_live).length;
-    document.getElementById('liveCount').textContent = liveCount;
-    document.getElementById('totalStreams').textContent = (data.items || []).length;
-    document.getElementById('totalViewers').textContent = (data.items || []).reduce((sum, s) => sum + (s.viewers || 0), 0);
-    
-    if (!data.items || data.items.length === 0) {
-      scroll.innerHTML = '<div style="padding:40px;color:var(--text-dim);">Стримов пока нет</div>';
-      return;
-    }
-    
-    data.items.forEach(s => {
-      const div = document.createElement('div');
-      div.className = 'horizontal-scroll-item';
-      const thumb = s.thumbnail_url 
-        ? '<img src="'+s.thumbnail_url+'" style="width:100%;height:100%;object-fit:cover;">'
-        : '<div style="font-size:48px;">📺</div>';
-      const liveBadge = s.is_live ? '<div style="position:absolute;top:10px;left:10px;background:var(--red);color:white;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800;">🔴 LIVE</div>' : '';
-      div.innerHTML = 
-        '<div class="thumb" style="position:relative;">'+liveBadge+thumb+'</div>'+
-        '<div class="info">'+
-          '<div class="title">'+s.title+'</div>'+
-          '<div class="author" onclick="viewProfile(\\\''+s.user_id+'\\\',\\\''+(s.author_name||'anon')+'\\\')">@'+(s.author_name||'anon')+'</div>'+
-        '</div>';
-      scroll.appendChild(div);
-    });
-  } catch(e) {
-    scroll.innerHTML = '<div style="padding:40px;color:var(--red);">Ошибка</div>';
-  }
-}
-
-async function createStream() {
-  if (!currentUser) { alert('Войди сначала'); return; }
-  const title = document.getElementById('streamTitle').value.trim();
-  const desc = document.getElementById('streamDesc').value.trim();
-  const url = document.getElementById('streamUrl').value.trim();
-  const thumb = document.getElementById('streamThumb').value.trim();
-  if (!title || !url) { alert('Название и URL обязательны'); return; }
-  const res = await fetch('/api/streams', {method:'POST', headers:{'Content-Type':'application/json'}, 
-    body:JSON.stringify({title, description:desc, stream_url:url, thumbnail_url:thumb})});
-  const data = await res.json();
-  if (data.ok) {
-    closeModal('streamModal');
-    document.getElementById('streamTitle').value = '';
-    document.getElementById('streamDesc').value = '';
-    document.getElementById('streamUrl').value = '';
-    document.getElementById('streamThumb').value = '';
-    loadStreams();
-  } else alert('Ошибка: '+data.error);
+async function saveProfile() {
+  const displayName = document.getElementById('editDisplayName').value.trim();
+  const username = document.getElementById('editUsername').value.trim();
+  const bio = document.getElementById('editBio').value.trim();
+  
+  // Здесь fetch('/api/profile/update') и fetch('/api/profile/username')
+  alert('Профиль сохранён! (Нужен бэкенд)');
+  closeModal('editProfileModal');
+  loadMyProfile();
 }
 
 // ===== ЧАТЫ =====
@@ -1121,16 +577,8 @@ async function loadChats() {
 
 async function openChatWithUser(userId, userName) {
   if (!currentUser) { alert('Войди сначала'); return; }
-  const res = await fetch('/api/chats/open', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user_id:userId})});
-  const data = await res.json();
-  if (data.chat_id) {
-    currentChatId = data.chat_id;
-    navigate('chats');
-    setTimeout(() => showChatView(userName), 300);
-  } else alert('Ошибка: '+data.error);
-}
-
-function showChatView(userName) {
+  // Здесь fetch('/api/chats/open')
+  currentChatId = 'mock_chat_' + userId;
   document.getElementById('chatsList').style.display = 'none';
   const container = document.getElementById('chatViewContainer');
   container.style.display = 'block';
@@ -1143,169 +591,45 @@ function showChatView(userName) {
       '<div class="chat-messages" id="chatMessages"><div style="text-align:center;color:var(--text-dim);padding:20px;">Начни разговор!</div></div>'+
       '<div class="chat-input-row">'+
         '<input id="chatInput" placeholder="Сообщение..." onkeydown="if(event.key===\'Enter\')sendMessage()">'+
-        '<button class="btn" style="width:auto;margin:0;" onclick="sendMessage()">📤</button>'+
+        '<button class="btn" style="width:auto;margin:0;" onclick="sendMessage()"></button>'+
       '</div>'+
     '</div>';
-  loadChatMessages();
-}
-
-async function loadChatMessages() {
-  if (!currentChatId) return;
-  const res = await fetch('/api/chats/'+currentChatId+'/messages');
-  const data = await res.json();
-  const el = document.getElementById('chatMessages');
-  if (!data.items || data.items.length === 0) {
-    el.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;">Начни разговор!</div>';
-    return;
-  }
-  el.innerHTML = data.items.map(m => 
-    '<div class="msg '+(m.sender_id===currentUser.id?'mine':'other')+'">'+m.text+'</div>'
-  ).join('');
-  el.scrollTop = el.scrollHeight;
 }
 
 async function sendMessage() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
   if (!text || !currentChatId) return;
-  await fetch('/api/chats/'+currentChatId+'/messages', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text})});
+  // Здесь fetch('/api/chats/'+currentChatId+'/messages')
+  const el = document.getElementById('chatMessages');
+  el.innerHTML += '<div class="msg mine">'+text+'</div>';
   input.value = '';
-  loadChatMessages();
+  el.scrollTop = el.scrollHeight;
 }
 
-// ===== ПРОФИЛЬ (Bento Grid) =====
-async function loadMyProfile() {
-  if (!currentUser) {
-    document.getElementById('profileContent').innerHTML = '<div style="text-align:center;padding:40px;">Войди чтобы увидеть профиль</div>';
-    return;
-  }
-  await showProfile(currentUser.id, currentUser.name, true);
+// ===== СТРИМЫ =====
+async function loadStreams() {
+  document.getElementById('streamsList').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim);">Стримов пока нет</div>';
 }
 
-async function viewProfile(userId, userName) {
-  navigate('profile');
-  await showProfile(userId, userName, false);
-}
-
-async function showProfile(userId, userName, isMe) {
-  const el = document.getElementById('profileContent');
-  el.innerHTML = '<div style="text-align:center;padding:40px;">Загрузка...</div>';
-  
-  try {
-    const url = isMe ? '/api/profile/me' : '/api/profile/'+userId;
-    const res = await fetch(url);
-    const p = await res.json();
-    if (p.error) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);">❌ '+p.error+'</div>'; return; }
-    currentProfile = p;
-    
-    const actions = p.is_me 
-      ? '<button class="btn" onclick="openModal(\'editProfileModal\')">✏️ Редактировать</button>'
-      : '<button class="btn" onclick="openChatWithUser(\\\''+p.user_id+'\\\',\\\''+p.username+'\\\')">💬 Написать</button>';
-    
-    // Bento Grid для профиля
-    el.innerHTML = 
-      '<div class="scroll-reveal">'+
-        '<div class="profile-header">'+
-          '<div class="profile-avatar">👻</div>'+
-          '<div class="profile-name">'+(p.display_name||p.username)+'</div>'+
-          '<div class="profile-username">@'+p.username+'</div>'+
-          '<div class="profile-bio">'+(p.bio||'<span style="color:var(--text-dim);font-style:italic;">Нет описания</span>')+'</div>'+
-          '<div style="display:flex;gap:10px;justify-content:center;">'+actions+'</div>'+
-        '</div>'+
-      '</div>'+
-      '<div class="bento-grid scroll-reveal">'+
-        '<div class="bento-item bento-large">'+
-          '<div style="font-size:48px;margin-bottom:10px;">📷</div>'+
-          '<div style="font-size:32px;font-weight:900;color:var(--orange);">'+p.media_count+'</div>'+
-          '<div style="color:var(--text-dim);margin-top:8px;">Постов</div>'+
-        '</div>'+
-        '<div class="bento-item">'+
-          '<div style="font-size:32px;">📺</div>'+
-          '<div style="font-size:24px;font-weight:800;color:var(--orange);margin-top:8px;">'+p.streams_count+'</div>'+
-          '<div style="color:var(--text-dim);font-size:12px;">Стримов</div>'+
-        '</div>'+
-        '<div class="bento-item">'+
-          '<div style="font-size:32px;">📅</div>'+
-          '<div style="font-size:14px;font-weight:700;color:var(--orange);margin-top:8px;">'+new Date(p.created_at).toLocaleDateString('ru-RU')+'</div>'+
-          '<div style="color:var(--text-dim);font-size:12px;">С нами с</div>'+
-        '</div>'+
-      '</div>'+
-      '<div class="scroll-reveal"><h3 style="color:var(--orange);margin:20px 0 12px;">📷 Контент</h3><div id="profileMedia"></div></div>';
-    
-    loadProfileMedia(p.user_id);
-    setTimeout(observeElements, 100);
-  } catch(e) {
-    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);">Ошибка</div>';
-  }
-}
-
-async function loadProfileMedia(userId) {
-  const el = document.getElementById('profileMedia');
-  if (!el) return;
-  try {
-    const res = await fetch('/api/feed?user_id='+userId);
-    const data = await res.json();
-    if (!data.items || data.items.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim);">Контента пока нет</div>';
-      return;
-    }
-    data.items.forEach(item => el.appendChild(renderCard(item)));
-    setTimeout(observeElements, 100);
-  } catch(e){}
-}
-
-async function saveProfile() {
-  const displayName = document.getElementById('editDisplayName').value.trim();
-  const username = document.getElementById('editUsername').value.trim();
-  const bio = document.getElementById('editBio').value.trim();
-  
-  try {
-    const res1 = await fetch('/api/profile/update', {method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({display_name:displayName, bio})});
-    const d1 = await res1.json();
-    if (!d1.ok) { alert('Ошибка профиля: '+d1.error); return; }
-    
-    if (username && username !== currentProfile.username) {
-      const res2 = await fetch('/api/profile/username', {method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({username})});
-      const d2 = await res2.json();
-      if (!d2.ok) { alert('Ошибка ника: '+d2.error); return; }
-      currentUser.name = d2.new_username;
-    }
-    
-    closeModal('editProfileModal');
-    loadMyProfile();
-  } catch(e) { alert('Ошибка: '+e.message); }
+async function createStream() {
+  const title = document.getElementById('streamTitle').value.trim();
+  const url = document.getElementById('streamUrl').value.trim();
+  if (!title || !url) { alert('Заполни поля'); return; }
+  // Здесь fetch('/api/streams')
+  alert('Стрим создан! (Нужен бэкенд)');
+  closeModal('streamModal');
+  loadStreams();
 }
 
 // ===== ЗАГРУЗКА МЕДИА =====
 async function startUpload() {
   const file = document.getElementById('fileInput').files[0];
   if (!file) return alert('Выбери файл');
-  if (!currentUser) { alert('Войди сначала'); return; }
-  alert('Загрузка... (нужен бэкенд)');
+  // Здесь логика сжатия и fetch('/api/upload')
+  alert('Загрузка... (Нужен бэкенд)');
   closeModal('uploadModal');
 }
-
-// ===== ПОИСК =====
-let searchTimer;
-document.getElementById('searchInput').addEventListener('input', e => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(async () => {
-    const q = e.target.value.trim();
-    if (!q) return loadFeed();
-    if (currentPage !== 'feed') navigate('feed');
-    const res = await fetch('/api/search?q='+encodeURIComponent(q));
-    const data = await res.json();
-    const feed = document.getElementById('feed');
-    feed.innerHTML = '';
-    if (!data.media || data.media.length === 0) {
-      feed.innerHTML = '<div style="text-align:center;padding:60px;">Ничего не найдено</div>';
-      return;
-    }
-    data.media.forEach(item => feed.appendChild(renderCard(item)));
-  }, 400);
-});
 
 // ===== ПАСХАЛКА =====
 let clicks = 0;
@@ -1319,7 +643,6 @@ document.getElementById('siteTitle').addEventListener('click', () => {
   }
 });
 
-let currentPage = 'feed';
 init();
 </script>
 </body>
