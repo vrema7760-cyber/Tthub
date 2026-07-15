@@ -1,16 +1,15 @@
-import { json, uuid, requireUser } from './utils.js';
+import { json, requireUser } from './utils.js';
 import { pickShardForWrite, storeBlobInShard, fetchBlobFromShard, bumpShardUsage } from './shards.js';
 
 const MAX_VIDEO_BYTES = 3 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 0.5 * 1024 * 1024;
-const ADMIN_NICK = 'vrema7760-cyber';
 
 export async function handleUpload(request, env) {
   const user = await requireUser(request, env);
   if (!user) return json({ error: 'unauthorized' }, 401);
 
   const body = await request.json();
-  const { type, mime, base64, caption, resolution, bitrate_kbps } = body;
+  const { type, mime, base64, caption, resolution, fps, bitrate_kbps } = body;
 
   if (!['video', 'photo'].includes(type)) return json({ error: 'bad_type' }, 400);
   if (!base64) return json({ error: 'missing_data' }, 400);
@@ -20,12 +19,12 @@ export async function handleUpload(request, env) {
   if (approxBytes > limit) {
     return json({
       error: 'too_large',
-      detail: `Файл ${approxBytes} байт превышает лимит ${limit} байт`,
+      detail: `Файл ${approxBytes} байт превышает лимит ${limit} байт`
     }, 413);
   }
 
   const shard = await pickShardForWrite(env, approxBytes);
-  const mediaId = uuid();
+  const mediaId = crypto.randomUUID();
   const blobKey = `media/${mediaId}`;
 
   await storeBlobInShard(env, shard, blobKey, mime, base64);
@@ -46,13 +45,22 @@ export async function handleFeed(request, env) {
   const url = new URL(request.url);
   const cursor = Number(url.searchParams.get('cursor') || Date.now());
   const limit = Math.min(Number(url.searchParams.get('limit') || 10), 30);
+  const userId = url.searchParams.get('user_id');
 
-  const { results } = await env.DB.prepare(
-    `SELECT media.*, users.name as author_name, users.avatar_url as author_avatar
+  let query = `SELECT media.*, users.name as author_name, users.avatar_url as author_avatar
      FROM media JOIN users ON users.id = media.user_id
-     WHERE media.created_at < ? AND media.deleted_at IS NULL
-     ORDER BY media.created_at DESC LIMIT ?`
-  ).bind(cursor, limit).all();
+     WHERE media.created_at < ? AND media.deleted_at IS NULL`;
+  const binds = [cursor];
+
+  if (userId) {
+    query += ' AND media.user_id = ?';
+    binds.push(userId);
+  }
+
+  query += ' ORDER BY media.created_at DESC LIMIT ?';
+  binds.push(limit);
+
+  const { results } = await env.DB.prepare(query).bind(...binds).all();
 
   return json({
     items: results,
@@ -78,7 +86,7 @@ export async function handleDeleteMedia(request, env, mediaId) {
   if (!media) return json({ error: 'not_found' }, 404);
   if (media.deleted_at) return json({ error: 'already_deleted' }, 400);
 
-  const isAdmin = user.name === ADMIN_NICK;
+  const isAdmin = user.name === 'vrema7760-cyber';
   const isOwner = media.user_id === user.id;
 
   if (!isAdmin && !isOwner) {
