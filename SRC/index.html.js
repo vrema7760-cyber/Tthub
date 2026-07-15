@@ -21,7 +21,6 @@ const INDEX_HTML = `<!DOCTYPE html>
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  
   html { scroll-behavior: smooth; }
   
   body {
@@ -615,7 +614,7 @@ const INDEX_HTML = `<!DOCTYPE html>
   
   <div id="page-streams" class="page">
     <div class="scroll-reveal">
-      <h2 style="color:var(--orange);font-size:32px;font-weight:800;margin-bottom:20px;"> Стримы</h2>
+      <h2 style="color:var(--orange);font-size:32px;font-weight:800;margin-bottom:20px;">📺 Стримы</h2>
     </div>
     
     <div class="bento-grid scroll-reveal">
@@ -631,7 +630,7 @@ const INDEX_HTML = `<!DOCTYPE html>
         <div style="color:var(--text-dim);font-size:12px;">зрителей</div>
       </div>
       <div class="bento-item">
-        <div style="font-size:32px;"></div>
+        <div style="font-size:32px;">📡</div>
         <div style="font-size:20px;font-weight:800;margin-top:8px;" id="totalStreams">0</div>
         <div style="color:var(--text-dim);font-size:12px;">стримов</div>
       </div>
@@ -643,7 +642,7 @@ const INDEX_HTML = `<!DOCTYPE html>
     </div>
 
     <div class="horizontal-scroll-section scroll-reveal">
-      <h2> Сейчас смотрят</h2>
+      <h2>🔥 Сейчас смотрят</h2>
       <div class="horizontal-scroll" id="streamsScroll"></div>
     </div>
 
@@ -672,7 +671,7 @@ const INDEX_HTML = `<!DOCTYPE html>
 
 <div id="uploadModal" class="modal">
   <div class="modal-box">
-    <h3> Загрузить</h3>
+    <h3>👻 Загрузить</h3>
     <input type="file" id="fileInput" accept="video/*,image/*">
     <input type="text" id="captionInput" placeholder="Подпись...">
     <button class="btn" id="uploadBtn">Загрузить</button>
@@ -682,7 +681,7 @@ const INDEX_HTML = `<!DOCTYPE html>
 
 <div id="editProfileModal" class="modal">
   <div class="modal-box">
-    <h3>✏️ Редактировать</h3>
+    <h3>️ Редактировать</h3>
     <label style="font-size:12px;color:var(--text-dim);">Имя</label>
     <input type="text" id="editDisplayName" maxlength="50">
     <label style="font-size:12px;color:var(--text-dim);">Ник (латиница, _)</label>
@@ -696,7 +695,7 @@ const INDEX_HTML = `<!DOCTYPE html>
 
 <div id="streamModal" class="modal">
   <div class="modal-box">
-    <h3>📺 Начать стрим</h3>
+    <h3> Начать стрим</h3>
     <input type="text" id="streamTitle" placeholder="Название">
     <textarea id="streamDesc" rows="2" placeholder="Описание"></textarea>
     <input type="text" id="streamUrl" placeholder="URL (YouTube embed)">
@@ -855,7 +854,7 @@ const INDEX_HTML = `<!DOCTYPE html>
       const data = await res.json();
       feed.innerHTML = '';
       if (!data.items || data.items.length === 0) {
-        feed.innerHTML = '<div class="scroll-reveal" style="text-align:center;padding:60px;"><div style="font-size:64px;margin-bottom:16px;">👻</div><div style="font-size:18px;">Пока пусто. Будь первым!</div></div>';
+        feed.innerHTML = '<div class="scroll-reveal" style="text-align:center;padding:60px;"><div style="font-size:64px;margin-bottom:16px;"></div><div style="font-size:18px;">Пока пусто. Будь первым!</div></div>';
         setTimeout(observeElements, 100);
         return;
       }
@@ -1047,7 +1046,7 @@ const INDEX_HTML = `<!DOCTYPE html>
         if (s.is_live) {
           const badge = document.createElement('div');
           badge.style.cssText = 'position:absolute;top:10px;left:10px;background:var(--red);color:white;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800;';
-          badge.textContent = ' LIVE';
+          badge.textContent = '🔴 LIVE';
           thumb.appendChild(badge);
         }
         div.appendChild(thumb);
@@ -1207,7 +1206,7 @@ const INDEX_HTML = `<!DOCTYPE html>
       
       const avatar = document.createElement('div');
       avatar.className = 'profile-avatar';
-      avatar.textContent = '';
+      avatar.textContent = '👻';
       profileHeader.appendChild(avatar);
       
       const name = document.createElement('div');
@@ -1249,12 +1248,12 @@ const INDEX_HTML = `<!DOCTYPE html>
       
       const largeItem = document.createElement('div');
       largeItem.className = 'bento-item bento-large';
-      largeItem.innerHTML = '<div style="font-size:48px;margin-bottom:10px;">📷</div><div style="font-size:32px;font-weight:900;color:var(--orange);">'+p.media_count+'</div><div style="color:var(--text-dim);margin-top:8px;">Постов</div>';
+      largeItem.innerHTML = '<div style="font-size:48px;margin-bottom:10px;"></div><div style="font-size:32px;font-weight:900;color:var(--orange);">'+p.media_count+'</div><div style="color:var(--text-dim);margin-top:8px;">Постов</div>';
       bentoGrid.appendChild(largeItem);
       
       const streamItem = document.createElement('div');
       streamItem.className = 'bento-item';
-      streamItem.innerHTML = '<div style="font-size:32px;">📺</div><div style="font-size:24px;font-weight:800;color:var(--orange);margin-top:8px;">'+p.streams_count+'</div><div style="color:var(--text-dim);font-size:12px;">Стримов</div>';
+      streamItem.innerHTML = '<div style="font-size:32px;"></div><div style="font-size:24px;font-weight:800;color:var(--orange);margin-top:8px;">'+p.streams_count+'</div><div style="color:var(--text-dim);font-size:12px;">Стримов</div>';
       bentoGrid.appendChild(streamItem);
       
       const dateItem = document.createElement('div');
@@ -1268,7 +1267,7 @@ const INDEX_HTML = `<!DOCTYPE html>
       contentSection.className = 'scroll-reveal';
       const h3 = document.createElement('h3');
       h3.style.cssText = 'color:var(--orange);margin:20px 0 12px;';
-      h3.textContent = ' Контент';
+      h3.textContent = '📷 Контент';
       contentSection.appendChild(h3);
       const mediaDiv = document.createElement('div');
       mediaDiv.id = 'profileMedia';
