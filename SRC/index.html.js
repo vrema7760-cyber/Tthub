@@ -2216,6 +2216,366 @@ function openNewChatModal() {
   $('#ncFind').onclick = find;
   $('#ncUser').onkeypress = e => { if (e.key === 'Enter') find(); };
 }
+// ============================================================
+// 🔧 ПАТЧ 1: АВРОРА ФОН — гарантия что он всегда виден
+// ============================================================
+(function ensureAurora() {
+  const ensure = () => {
+    const bg = document.querySelector('.aurora-bg');
+    if (!bg) {
+      const newBg = document.createElement('div');
+      newBg.className = 'aurora-bg';
+      newBg.innerHTML = '<div class="aurora-blob"></div><div class="aurora-blob"></div><div class="aurora-blob"></div>';
+      document.body.insertBefore(newBg, document.body.firstChild);
+    }
+    // Принудительно ставим z-index через inline style (на случай если CSS сломан)
+    const blobs = document.querySelectorAll('.aurora-blob');
+    if (blobs.length === 0 && bg) {
+      bg.innerHTML = '<div class="aurora-blob"></div><div class="aurora-blob"></div><div class="aurora-blob"></div>';
+    }
+  };
+  ensure();
+  // Повторная проверка через 500мс (на случай SPA-переходов)
+  setTimeout(ensure, 500);
+  setTimeout(ensure, 2000);
+})();
+
+// ============================================================
+// 🔧 ПАТЧ 2: АВТОУДАЛЕНИЕ НЕРАБОЧИХ СТРИМОВ + КНОПКА УДАЛИТЬ
+// ============================================================
+
+// Проверка валидности URL стрима
+function isValidStreamUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  const u = url.trim();
+  if (!u) return false;
+  // YouTube
+  if (/youtube\.com\/watch\?v=/.test(u)) return true;
+  if (/youtu\.be\//.test(u)) return true;
+  if (/youtube\.com\/embed\//.test(u)) return true;
+  // Twitch
+  if (/twitch\.tv\//.test(u)) return true;
+  // Vimeo
+  if (/vimeo\.com\/\d+/.test(u)) return true;
+  // Любой валидный http(s) URL
+  try { new URL(u); return true; } catch { return false; }
+}
+
+// Извлечение videoId для YouTube превью
+function extractYouTubeId(url) {
+  if (!url) return null;
+  const m1 = url.match(/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/);
+  if (m1) return m1[1];
+  const m2 = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+  if (m2) return m2[1];
+  const m3 = url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/);
+  if (m3) return m3[1];
+  return null;
+}
+
+// Переопределяем loadStreams — фильтруем невалидные стримы
+const _origLoadStreams = loadStreams;
+loadStreams = async function() {
+  const container = $('#streams-container');
+  container.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
+  try {
+    const data = await apiGet('/api/streams?limit=50');
+    const allStreams = data.items || [];
+    
+    // Разделяем на валидные и невалидные
+    const validStreams = allStreams.filter(s => isValidStreamUrl(s.stream_url));
+    const invalidStreams = allStreams.filter(s => !isValidStreamUrl(s.stream_url));
+    
+    // 🔥 Автоудаление невалидных стримов для админа
+    const isAdmin = state.user && (
+      (state.user.username || '').toLowerCase() === 'negr' ||
+      (state.user.name || '').toLowerCase() === 'negr'
+    );
+    
+    if (isAdmin && invalidStreams.length > 0) {
+      console.log('🗑️ Удаляю ' + invalidStreams.length + ' нерабочих стримов...');
+      for (const bad of invalidStreams) {
+        try {
+          await apiDelete('/api/streams/' + bad.id);
+        } catch (e) {
+          console.warn('Не удалось удалить стрим ' + bad.id, e);
+        }
+      }
+      if (invalidStreams.length > 0) {
+        showToast('🧹 Удалено нерабочих стримов: ' + invalidStreams.length, 'success');
+      }
+    }
+    
+    // Показываем только валидные LIVE стримы
+    const liveStreams = validStreams.filter(s => s.is_live === 1 || s.is_live === true);
+    const count = liveStreams.length;
+    
+    $('#liveCount').textContent = count + (count === 1 ? ' стрим' : ' стримов');
+    
+    if (count === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-icon">📺</div><div class="empty-text">Нет активных стримов. Начните свой!</div></div>';
+      return;
+    }
+    
+    container.innerHTML = '<div class="streams-scroll">' + liveStreams.map(s => renderStreamCardEnhanced(s)).join('') + '</div>';
+    
+    // Обработчики кликов на превью
+    container.querySelectorAll('.stream-thumb').forEach(thumb => {
+      thumb.addEventListener('click', () => {
+        const preview = thumb.parentElement;
+        const embedUrl = preview.dataset.embed;
+        preview.innerHTML = '<iframe src="' + escapeHtml(embedUrl) + '" allowfullscreen allow="autoplay; encrypted-media" style="width:100%;height:100%;border:none;"></iframe>';
+      });
+    });
+    
+    // Обработчики кнопок "Удалить"
+    container.querySelectorAll('.stream-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm('Удалить этот стрим?')) return;
+        try {
+          await apiDelete('/api/streams/' + btn.dataset.streamId);
+          showToast('Стрим удалён');
+          btn.closest('.stream-card').remove();
+          const newCount = container.querySelectorAll('.stream-card').length;
+          $('#liveCount').textContent = newCount + ' стримов';
+        } catch (e) {
+          showToast('Ошибка: ' + e.message, 'error');
+        }
+      });
+    });
+  } catch (e) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-text">Ошибка: ' + escapeHtml(e.message) + '</div></div>';
+  }
+};
+
+// Улучшенная карточка стрима с кнопкой удаления
+function renderStreamCardEnhanced(stream) {
+  let embedUrl = stream.stream_url || '';
+  let thumbnailUrl = stream.thumbnail_url || '';
+  const videoId = extractYouTubeId(embedUrl);
+  
+  // Конвертация в embed URL
+  if (/youtube\.com\/watch\?v=/.test(embedUrl)) embedUrl = 'https://www.youtube.com/embed/' + videoId;
+  else if (/youtu\.be\//.test(embedUrl)) embedUrl = 'https://www.youtube.com/embed/' + videoId;
+  else if (/vimeo\.com\/(\d+)/.test(embedUrl)) embedUrl = 'https://player.vimeo.com/video/' + embedUrl.match(/vimeo\.com\/(\d+)/)[1];
+  
+  // Автопревью из YouTube
+  if (!thumbnailUrl && videoId) {
+    thumbnailUrl = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
+  }
+  
+  const authorName = stream.author_display_name || stream.author_name || 'Стример';
+  const isOwner = state.user && state.user.user_id === stream.user_id;
+  const isAdmin = state.user && (
+    (state.user.username || '').toLowerCase() === 'negr' ||
+    (state.user.name || '').toLowerCase() === 'negr'
+  );
+  const canDelete = isOwner || isAdmin;
+  
+  const previewHtml = thumbnailUrl
+    ? '<div class="stream-thumb" style="position:relative;width:100%;height:100%;background:#000 url(\'' + escapeHtml(thumbnailUrl) + '\') center/cover no-repeat;cursor:pointer;display:flex;align-items:center;justify-content:center;">' +
+        '<div style="width:60px;height:60px;background:rgba(239,68,68,0.9);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;color:white;box-shadow:0 4px 20px rgba(0,0,0,0.5);">▶</div>' +
+        '<div style="position:absolute;top:10px;right:10px;background:rgba(239,68,68,0.9);color:white;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;">LIVE</div>' +
+      '</div>'
+    : '<div style="position:relative;width:100%;height:100%;background:linear-gradient(135deg,#1a1a2e,#0a0a1a);display:flex;align-items:center;justify-content:center;font-size:48px;">📺</div>';
+  
+  const deleteBtn = canDelete
+    ? '<button class="stream-delete-btn" data-stream-id="' + escapeHtml(stream.id) + '" style="position:absolute;bottom:10px;right:10px;background:rgba(239,68,68,0.9);color:white;border:none;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;z-index:10;backdrop-filter:blur(10px);" title="Удалить стрим">🗑️ Удалить</button>'
+    : '';
+  
+  return '<div class="stream-card reveal" style="position:relative;">' +
+    '<div class="stream-preview" data-embed="' + escapeHtml(embedUrl) + '" style="position:relative;">' +
+      previewHtml +
+      deleteBtn +
+    '</div>' +
+    '<div class="stream-info">' +
+      '<div class="stream-title">' + escapeHtml(stream.title || 'Без названия') + '</div>' +
+      '<div class="stream-author">' + escapeHtml(authorName) + '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+// ============================================================
+// 🔧 ПАТЧ 3: КЛИК ПО ПОЛЬЗОВАТЕЛЮ → СОЗДАНИЕ ЧАТА
+// ============================================================
+
+// Главная функция: открывает чат с пользователем по username
+async function openChatWith(username) {
+  if (!state.user) {
+    showToast('Нужно войти, чтобы общаться', 'error');
+    return;
+  }
+  
+  // Не даём открыть чат с самим собой
+  if (username === state.user.username || username === state.user.name) {
+    showToast('Это вы сами 😅', 'error');
+    return;
+  }
+  
+  showToast('🔎 Ищу пользователя @' + username + '...', 'success');
+  
+  try {
+    // Ищем пользователя по username
+    const user = await apiGet('/api/users/by-username/' + encodeURIComponent(username));
+    
+    // Открываем/создаём чат
+    const res = await apiPost('/api/chats/open', { with_user_id: user.id });
+    
+    showToast('💬 Открываю чат с ' + (user.display_name || user.name), 'success');
+    
+    // Переключаемся в раздел чатов и открываем этот чат
+    state.currentChat = {
+      id: res.chat.id,
+      otherUserId: user.id,
+      otherUserName: user.display_name || user.name,
+      otherUserAvatar: user.avatar_url
+    };
+    
+    switchSection('chats');
+  } catch (e) {
+    if (e.message && e.message.includes('user_not_found')) {
+      showToast('Пользователь @' + username + ' не найден', 'error');
+    } else {
+      showToast('Ошибка: ' + e.message, 'error');
+    }
+  }
+}
+
+// Модалка подтверждения перед открытием чата
+function confirmOpenChat(username, displayName) {
+  let modal = $('#confirmChatModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'confirmChatModal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = '<div class="modal" style="max-width:400px;"><h2 class="modal-title">💬 Начать чат?</h2><p id="confirmChatText" style="text-align:center;color:var(--text-secondary);margin-bottom:20px;"></p><div class="modal-actions"><button class="btn btn-secondary" id="confirmChatCancel">Отмена</button><button class="btn btn-primary" id="confirmChatOk">Открыть чат</button></div></div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('active'); });
+  }
+  $('#confirmChatText').textContent = 'Начать переписку с ' + (displayName || '@' + username) + '?';
+  modal.classList.add('active');
+  
+  $('#confirmChatCancel').onclick = () => modal.classList.remove('active');
+  $('#confirmChatOk').onclick = () => {
+    modal.classList.remove('active');
+    openChatWith(username);
+  };
+}
+
+// Делегирование событий — ловим клики по username в любом месте страницы
+document.addEventListener('click', (e) => {
+  // 1. Клик по автору поста (.media-author span)
+  const authorSpan = e.target.closest('.media-author span');
+  if (authorSpan) {
+    e.preventDefault();
+    const username = authorSpan.textContent.trim();
+    if (username && username !== 'Аноним') {
+      confirmOpenChat(username, username);
+    }
+    return;
+  }
+  
+  // 2. Клик по аватару автора поста (.media-author img)
+  const authorImg = e.target.closest('.media-author img');
+  if (authorImg) {
+    const authorContainer = authorImg.closest('.media-author');
+    if (authorContainer) {
+      const span = authorContainer.querySelector('span');
+      if (span) {
+        e.preventDefault();
+        const username = span.textContent.trim();
+        if (username && username !== 'Аноним') {
+          confirmOpenChat(username, username);
+        }
+      }
+    }
+    return;
+  }
+  
+  // 3. Клик по автору в комментариях (нужно добавить класс .comment-author-name)
+  const commentAuthor = e.target.closest('.comment-author-name');
+  if (commentAuthor) {
+    e.preventDefault();
+    const username = commentAuthor.dataset.username || commentAuthor.textContent.trim();
+    if (username) {
+      confirmOpenChat(username, username);
+    }
+    return;
+  }
+  
+  // 4. Клик по @username в тексте (если кто-то упомянул)
+  const mention = e.target.closest('.mention');
+  if (mention) {
+    e.preventDefault();
+    const username = mention.dataset.username || mention.textContent.replace(/^@/, '').trim();
+    if (username) {
+      confirmOpenChat(username, '@' + username);
+    }
+    return;
+  }
+});
+
+// ============================================================
+// 🔧 ПАТЧ 3.1: УЛУЧШЕННЫЕ КОММЕНТАРИИ С КЛИКАБЕЛЬНЫМИ АВТОРАМИ
+// ============================================================
+
+// Переопределяем loadComments — добавляем кликабельные авторы
+const _origLoadComments = (typeof loadComments === 'function') ? loadComments : null;
+if (_origLoadComments) {
+  loadComments = async function(mediaId) {
+    const list = $('#commentsList');
+    if (!list) return;
+    list.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
+    try {
+      const data = await apiGet('/api/media/' + mediaId + '/comments');
+      if (!data.items || data.items.length === 0) {
+        list.innerHTML = '<div class="empty-state" style="padding:20px;"><div class="empty-text">Пока нет комментариев</div></div>';
+        return;
+      }
+      list.innerHTML = data.items.map(c => {
+        const avatar = c.author_avatar || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+        // Определяем username (может быть в author_name или отдельно)
+        const username = c.author_name || 'Аноним';
+        const isMe = state.user && state.user.user_id === c.user_id;
+        const isClickable = username !== 'Аноним' && !isMe;
+        const cursorStyle = isClickable ? 'cursor:pointer;' : '';
+        const hoverClass = isClickable ? 'comment-author-name' : '';
+        return '<div style="display:flex;gap:10px;padding:10px;border-bottom:1px solid var(--border);">' +
+          '<img src="' + escapeHtml(avatar) + '" style="width:32px;height:32px;border-radius:50%;flex-shrink:0;object-fit:cover;' + cursorStyle + '" data-username="' + escapeHtml(username) + '">' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div class="' + hoverClass + '" data-username="' + escapeHtml(username) + '" style="font-weight:600;font-size:13px;' + cursorStyle + (isClickable ? 'color:var(--accent-purple);' : '') + '">' + 
+              escapeHtml(username) + 
+              (isMe ? ' <span style="color:var(--accent-purple);font-size:11px;">(вы)</span>' : '') +
+              (isClickable ? ' <span style="font-size:10px;opacity:0.6;">💬</span>' : '') +
+            '</div>' +
+            '<div style="font-size:14px;margin-top:2px;word-break:break-word;">' + escapeHtml(c.text) + '</div>' +
+            '<div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">' + timeAgo(c.created_at) + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    } catch (e) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-text">Ошибка загрузки</div></div>';
+    }
+  };
+}
+
+// ============================================================
+// 🔧 ПАТЧ 4: ПОДСКАЗКА ПРИ НАВЕДЕНИИ НА USERNAME
+// ============================================================
+(function addUsernameHints() {
+  const style = document.createElement('style');
+  style.textContent = `
+    .media-author span { cursor: pointer; transition: color 0.2s; }
+    .media-author span:hover { color: var(--accent-purple); text-decoration: underline; }
+    .comment-author-name:hover { color: var(--accent-orange) !important; text-decoration: underline; }
+    .stream-delete-btn:hover { background: rgba(220, 38, 38, 1) !important; transform: scale(1.05); }
+    .stream-delete-btn { transition: all 0.2s; }
+  `;
+  document.head.appendChild(style);
+})();
+
+console.log('✅ SpookyTok патчи загружены: aurora-bg, авто-удаление стримов, клик по пользователю');
 </script>
 </body>
 </html>`;
