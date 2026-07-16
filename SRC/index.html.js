@@ -2,7 +2,7 @@ const INDEX_HTML = `<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0a0a1a">
 <title>🎃 SpookyTok — Жуткие Истории</title>
 <style>
@@ -20,6 +20,8 @@ const INDEX_HTML = `<!DOCTYPE html>
   --success: #10b981;
   --border: rgba(139, 92, 246, 0.2);
   --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -36,7 +38,8 @@ html, body {
 body {
   min-height: 100vh;
   position: relative;
-  padding-bottom: 80px;
+  padding-bottom: calc(80px + var(--safe-bottom));
+  padding-top: var(--safe-top);
 }
 
 /* ===== AURORA ФОН ===== */
@@ -112,13 +115,13 @@ body {
 
 @media (hover: hover) and (pointer: fine) {
   .magnetic-cursor { display: block; }
-  * { cursor: none !important; }
+  body * { cursor: none !important; }
 }
 
 /* ===== HEADER ===== */
 .app-header {
   position: sticky;
-  top: 0;
+  top: var(--safe-top);
   z-index: 100;
   padding: 16px 20px;
   background: rgba(10, 10, 26, 0.85);
@@ -158,6 +161,7 @@ body {
   justify-content: center;
   transition: all 0.2s;
   cursor: pointer;
+  position: relative;
 }
 
 .icon-btn:hover {
@@ -172,6 +176,11 @@ body {
   border: 2px solid var(--accent-purple);
   background: var(--bg-card);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  text-decoration: none;
 }
 
 .avatar-btn img { width: 100%; height: 100%; object-fit: cover; }
@@ -182,7 +191,7 @@ body {
   bottom: 0;
   left: 0; right: 0;
   z-index: 100;
-  padding: 12px 20px;
+  padding: 12px 20px calc(12px + var(--safe-bottom));
   background: rgba(10, 10, 26, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -302,6 +311,7 @@ body {
   border-radius: 20px;
   font-size: 12px;
   backdrop-filter: blur(10px);
+  color: white;
 }
 
 .media-info {
@@ -327,11 +337,12 @@ body {
   color: var(--text-secondary);
   line-height: 1.4;
   margin-bottom: 10px;
+  word-break: break-word;
 }
 
 .media-actions {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   font-size: 13px;
   color: var(--text-secondary);
   flex-wrap: wrap;
@@ -348,11 +359,13 @@ body {
   border-radius: 8px;
   transition: all 0.2s;
   cursor: pointer;
+  font-size: 13px;
 }
 
 .media-action:hover { background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); }
 .media-action.liked { color: var(--accent-pink); }
 .media-action.saved { color: var(--accent-orange); }
+.media-action.delete-btn { color: var(--danger) !important; margin-left: auto; }
 
 /* ===== СТРИМЫ ===== */
 .streams-header {
@@ -401,7 +414,7 @@ body {
 .streams-scroll::-webkit-scrollbar-thumb { background: var(--accent-purple); border-radius: 3px; }
 
 .stream-card {
-  flex: 0 0 280px;
+  flex: 0 0 300px;
   scroll-snap-align: start;
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -469,11 +482,12 @@ body {
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--accent-purple);
+  flex-shrink: 0;
 }
 
-.chat-info { flex: 1; }
-.chat-name { font-weight: 600; font-size: 15px; }
-.chat-preview { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+.chat-info { flex: 1; min-width: 0; }
+.chat-name { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-preview { font-size: 13px; color: var(--text-secondary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .chat-window {
   display: flex;
@@ -608,6 +622,7 @@ body {
   text-align: center;
   max-width: 400px;
   line-height: 1.5;
+  word-break: break-word;
 }
 
 .profile-stats {
@@ -651,6 +666,7 @@ body {
   align-items: center;
   gap: 6px;
   text-decoration: none;
+  font-family: inherit;
 }
 
 .btn-primary {
@@ -769,7 +785,7 @@ body {
 /* ===== УВЕДОМЛЕНИЯ ===== */
 .toast {
   position: fixed;
-  top: 80px;
+  top: calc(80px + var(--safe-top));
   left: 50%;
   transform: translateX(-50%);
   padding: 12px 20px;
@@ -780,6 +796,8 @@ body {
   z-index: 300;
   animation: toastIn 0.3s ease-out;
   backdrop-filter: blur(20px);
+  max-width: 90vw;
+  text-align: center;
 }
 
 .toast.success { border-color: var(--success); }
@@ -834,6 +852,7 @@ body {
   .profile-stats { gap: 16px; }
   .profile-avatar { width: 80px; height: 80px; }
   .profile-name { font-size: 20px; }
+  .stream-card { flex: 0 0 260px; }
 }
 
 @media (min-width: 1024px) {
@@ -876,19 +895,13 @@ body.easter-egg {
   transform: translateY(0);
 }
 
-/* ===== СКРЫТЫЕ УТИЛИТЫ ===== */
+/* ===== УТИЛИТЫ ===== */
 .hidden { display: none !important; }
 .text-center { text-align: center; }
 .mt-2 { margin-top: 8px; }
 .mt-4 { margin-top: 16px; }
 .mb-2 { margin-bottom: 8px; }
 .mb-4 { margin-bottom: 16px; }
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.gap-2 { gap: 8px; }
-.gap-4 { gap: 16px; }
 .w-full { width: 100%; }
 </style>
 </head>
@@ -1105,14 +1118,16 @@ const state = {
   currentSection: 'feed',
   currentChat: null,
   chatPollInterval: null,
-  easterEggClicks: 0
+  easterEggClicks: 0,
+  feedLoaded: false,
+  streamsLoaded: false
 };
 
 // ============================================
 // УТИЛИТЫ
 // ============================================
-function $(sel) { return document.querySelector(sel); }
-function $$(sel) { return document.querySelectorAll(sel); }
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
 
 function showToast(message, type = 'success') {
   const toast = document.createElement('div');
@@ -1130,7 +1145,7 @@ function openModal(id) { $('#' + id).classList.add('active'); }
 function closeModal(id) { $('#' + id).classList.remove('active'); }
 
 function escapeHtml(str) {
-  if (!str) return '';
+  if (str === null || str === undefined) return '';
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -1140,14 +1155,25 @@ function escapeHtml(str) {
 }
 
 function timeAgo(ts) {
-  const diff = Date.now() - (typeof ts === 'number' ? ts : new Date(ts).getTime());
+  const time = typeof ts === 'number' ? ts : new Date(ts).getTime();
+  if (isNaN(time)) return '';
+  const diff = Date.now() - time;
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'только что';
   if (mins < 60) return mins + ' мин назад';
   const hours = Math.floor(mins / 60);
   if (hours < 24) return hours + ' ч назад';
   const days = Math.floor(hours / 24);
-  return days + ' дн назад';
+  if (days < 7) return days + ' дн назад';
+  return new Date(time).toLocaleDateString('ru-RU');
+}
+
+function debounce(fn, ms) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), ms);
+  };
 }
 
 // ============================================
@@ -1172,10 +1198,26 @@ async function api(url, options = {}) {
   return data;
 }
 
-async function apiGet(url) { return api(url); }
-async function apiPost(url, body) { return api(url, { method: 'POST', body: JSON.stringify(body) }); }
-async function apiPut(url, body) { return api(url, { method: 'PUT', body: JSON.stringify(body) }); }
-async function apiDelete(url) { return api(url, { method: 'DELETE' }); }
+const apiGet = (url) => api(url);
+const apiPost = (url, body) => api(url, { method: 'POST', body: JSON.stringify(body) });
+const apiPut = (url, body) => api(url, { method: 'PUT', body: JSON.stringify(body) });
+const apiDelete = (url) => api(url, { method: 'DELETE' });
+
+// ============================================
+// SCROLL REVEAL (глобальный observer)
+// ============================================
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      revealObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1 });
+
+function initScrollReveal() {
+  $$('.reveal:not(.visible)').forEach(el => revealObserver.observe(el));
+}
 
 // ============================================
 // НАВИГАЦИЯ
@@ -1199,6 +1241,7 @@ function switchSection(sectionName) {
   }
 
   setTimeout(initScrollReveal, 100);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 $$('.nav-item[data-section]').forEach(btn => {
@@ -1213,34 +1256,48 @@ async function checkAuth() {
     const profile = await apiGet('/api/profile/me');
     state.user = profile;
     updateAuthUI();
-    loadFeed();
   } catch (e) {
-    loadFeed();
+    state.user = null;
   }
+  // Загружаем ленту всегда (даже для неавторизованных)
+  loadFeed();
 }
 
 function updateAuthUI() {
   const loginBtn = $('#loginBtn');
-  if (state.user && state.user.avatar_url) {
+  if (state.user) {
+    const avatarUrl = state.user.avatar_url || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
     loginBtn.href = '#profile';
     loginBtn.onclick = (e) => { e.preventDefault(); switchSection('profile'); };
-    loginBtn.innerHTML = '<img src="' + escapeHtml(state.user.avatar_url) + '" alt="avatar">';
+    loginBtn.innerHTML = '<img src="' + escapeHtml(avatarUrl) + '" alt="avatar">';
   }
 }
 
 // ============================================
 // ЛЕНТА
 // ============================================
-async function loadFeed() {
+async function loadFeed(force = false) {
   const container = $('#feed-container');
+
+  // Кэш: не перезагружаем если уже загружали и не принудительно
+  if (state.feedLoaded && !force) {
+    setTimeout(initScrollReveal, 100);
+    initMediaVideoHover();
+    return;
+  }
+
+  container.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
   try {
     const data = await apiGet('/api/media/feed?limit=20');
+    state.feedLoaded = true;
     if (!data.items || data.items.length === 0) {
       container.innerHTML = '<div class="empty-state"><div class="empty-icon">👻</div><div class="empty-text">Лента пуста. Загрузите первый контент!</div></div>';
       return;
     }
     container.innerHTML = '<div class="media-grid">' + data.items.map(renderMediaCard).join('') + '</div>';
     initMediaActions();
+    initMediaVideoHover();
+    setTimeout(initScrollReveal, 50);
   } catch (e) {
     container.innerHTML = '<div class="empty-state"><div class="empty-icon">😱</div><div class="empty-text">Ошибка загрузки: ' + escapeHtml(e.message) + '</div></div>';
   }
@@ -1249,22 +1306,28 @@ async function loadFeed() {
 function renderMediaCard(item) {
   const previewUrl = '/api/media/' + item.id;
   const isVideo = item.type === 'video';
+  const authorAvatar = item.author_avatar || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+  const authorName = item.author_name || 'Аноним';
+  const canDelete = state.user && (state.user.user_id === item.user_id);
+
   return '<div class="media-card reveal">' +
     '<div class="media-preview">' +
-      (isVideo ? '<video src="' + previewUrl + '" muted loop playsinline></video>' : '<img src="' + previewUrl + '" alt="media" loading="lazy">') +
-      '<span class="media-type-badge">' + (isVideo ? '🎬' : '📷') + '</span>' +
+      (isVideo
+        ? '<video src="' + previewUrl + '" muted loop playsinline preload="metadata"></video>'
+        : '<img src="' + previewUrl + '" alt="media" loading="lazy">') +
+      '<span class="media-type-badge">' + (isVideo ? '🎬 Видео' : '📷 Фото') + '</span>' +
     '</div>' +
     '<div class="media-info">' +
       '<div class="media-author">' +
-        '<img src="' + escapeHtml(item.author_avatar || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png') + '" alt="avatar">' +
-        '<span>' + escapeHtml(item.author_name || 'Аноним') + '</span>' +
+        '<img src="' + escapeHtml(authorAvatar) + '" alt="avatar">' +
+        '<span>' + escapeHtml(authorName) + '</span>' +
       '</div>' +
       (item.caption ? '<div class="media-caption">' + escapeHtml(item.caption) + '</div>' : '') +
       '<div class="media-actions">' +
         '<button class="media-action like-btn" data-id="' + item.id + '">❤️ <span>' + (item.likes_count || 0) + '</span></button>' +
         '<button class="media-action comment-btn" data-id="' + item.id + '">💬 <span>' + (item.comments_count || 0) + '</span></button>' +
         '<button class="media-action save-btn" data-id="' + item.id + '">🔖 <span>' + (item.saves_count || 0) + '</span></button>' +
-        (state.user && (state.user.user_id === item.user_id || state.user.username === 'vrema7760-cyber') ? '<button class="media-action delete-btn" data-id="' + item.id + '" style="margin-left:auto;color:var(--danger);">🗑️</button>' : '') +
+        (canDelete ? '<button class="media-action delete-btn" data-id="' + item.id + '">🗑️</button>' : '') +
       '</div>' +
     '</div>' +
   '</div>';
@@ -1273,23 +1336,27 @@ function renderMediaCard(item) {
 function initMediaActions() {
   $$('.like-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
+      if (!state.user) { showToast('Нужно войти', 'error'); return; }
       try {
         const data = await apiPost('/api/media/' + btn.dataset.id + '/like');
         const span = btn.querySelector('span');
-        span.textContent = parseInt(span.textContent) + (data.liked ? 1 : -1);
+        const current = parseInt(span.textContent) || 0;
+        span.textContent = current + (data.liked ? 1 : -1);
         btn.classList.toggle('liked', data.liked);
-      } catch (e) { showToast('Нужно войти', 'error'); }
+      } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
     });
   });
 
   $$('.save-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
+      if (!state.user) { showToast('Нужно войти', 'error'); return; }
       try {
         const data = await apiPost('/api/media/' + btn.dataset.id + '/save');
         const span = btn.querySelector('span');
-        span.textContent = parseInt(span.textContent) + (data.saved ? 1 : -1);
+        const current = parseInt(span.textContent) || 0;
+        span.textContent = current + (data.saved ? 1 : -1);
         btn.classList.toggle('saved', data.saved);
-      } catch (e) { showToast('Нужно войти', 'error'); }
+      } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
     });
   });
 
@@ -1300,7 +1367,28 @@ function initMediaActions() {
         await apiDelete('/api/media/' + btn.dataset.id);
         showToast('Удалено');
         btn.closest('.media-card').remove();
-      } catch (e) { showToast(e.message, 'error'); }
+      } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
+    });
+  });
+
+  $$('.comment-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      showToast('Комментарии скоро!', 'success');
+    });
+  });
+}
+
+// Автоплей видео при наведении
+function initMediaVideoHover() {
+  $$('.media-card').forEach(card => {
+    const video = card.querySelector('video');
+    if (!video) return;
+    card.addEventListener('mouseenter', () => {
+      video.play().catch(() => {});
+    });
+    card.addEventListener('mouseleave', () => {
+      video.pause();
+      video.currentTime = 0;
     });
   });
 }
@@ -1310,11 +1398,16 @@ function initMediaActions() {
 // ============================================
 async function loadStreams() {
   const container = $('#streams-container');
+  container.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
+
   try {
-    const data = await apiGet('/api/streams?limit=20');
-    $('#liveCount').textContent = (data.items ? data.items.length : 0) + ' стримов';
-    if (!data.items || data.items.length === 0) {
-      container.innerHTML = '<div class="empty-state"><div class="empty-icon">📺</div><div class="empty-text">Нет активных стримов</div></div>';
+    // Только LIVE стримы
+    const data = await apiGet('/api/streams?limit=20&live=1');
+    const count = data.items ? data.items.length : 0;
+    $('#liveCount').textContent = count + (count === 1 ? ' стрим' : ' стримов');
+
+    if (!data.items || count === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-icon">📺</div><div class="empty-text">Нет активных стримов. Начните свой!</div></div>';
       return;
     }
     container.innerHTML = '<div class="streams-scroll">' + data.items.map(renderStreamCard).join('') + '</div>';
@@ -1332,13 +1425,15 @@ function renderStreamCard(stream) {
   const vimeoMatch = embedUrl.match(/vimeo\\.com\\/(\\d+)/);
   if (vimeoMatch) embedUrl = 'https://player.vimeo.com/video/' + vimeoMatch[1];
 
+  const authorName = stream.author_display_name || stream.author_name || 'Стример';
+
   return '<div class="stream-card reveal">' +
     '<div class="stream-preview">' +
-      '<iframe src="' + escapeHtml(embedUrl) + '" allowfullscreen allow="autoplay; encrypted-media"></iframe>' +
+      '<iframe src="' + escapeHtml(embedUrl) + '" allowfullscreen allow="autoplay; encrypted-media" loading="lazy"></iframe>' +
     '</div>' +
     '<div class="stream-info">' +
-      '<div class="stream-title">' + escapeHtml(stream.title) + '</div>' +
-      '<div class="stream-author">' + escapeHtml(stream.author_display_name || stream.author_name) + '</div>' +
+      '<div class="stream-title">' + escapeHtml(stream.title || 'Без названия') + '</div>' +
+      '<div class="stream-author">' + escapeHtml(authorName) + '</div>' +
     '</div>' +
   '</div>';
 }
@@ -1364,8 +1459,9 @@ $('#confirmStream').addEventListener('click', async () => {
     $('#streamDescription').value = '';
     $('#streamUrl').value = '';
     $('#streamThumbnail').value = '';
+    state.streamsLoaded = false;
     loadStreams();
-  } catch (e) { showToast(e.message, 'error'); }
+  } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
 });
 
 $('#cancelStream').addEventListener('click', () => closeModal('streamModal'));
@@ -1379,12 +1475,14 @@ async function loadChats() {
     renderChatWindow(state.currentChat);
     return;
   }
+  if (!state.user) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><div class="empty-text">Войдите, чтобы общаться</div></div>';
+    return;
+  }
+
+  container.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
   try {
     const data = await apiGet('/api/chats');
-    if (!state.user) {
-      container.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><div class="empty-text">Войдите, чтобы общаться</div></div>';
-      return;
-    }
     if (!data.items || data.items.length === 0) {
       container.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><div class="empty-text">У вас пока нет чатов</div></div>';
       return;
@@ -1395,7 +1493,8 @@ async function loadChats() {
         state.currentChat = {
           id: item.dataset.chatId,
           otherUserId: item.dataset.otherUserId,
-          otherUserName: item.dataset.otherUserName
+          otherUserName: item.dataset.otherUserName,
+          otherUserAvatar: item.dataset.otherUserAvatar
         };
         loadChats();
       });
@@ -1406,9 +1505,14 @@ async function loadChats() {
 }
 
 function renderChatItem(chat) {
+  const displayName = chat.other_user_display_name || chat.other_user_name || ('Пользователь ' + (chat.other_user_id || '').substring(0, 8));
   const avatarUrl = chat.other_user_avatar || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
-  const displayName = chat.other_user_name || ('Пользователь ' + (chat.other_user_id || '').substring(0, 8));
-  return '<div class="chat-item" data-chat-id="' + chat.id + '" data-other-user-id="' + chat.other_user_id + '" data-other-user-name="' + escapeHtml(displayName) + '">' +
+
+  return '<div class="chat-item" ' +
+    'data-chat-id="' + escapeHtml(chat.id) + '" ' +
+    'data-other-user-id="' + escapeHtml(chat.other_user_id) + '" ' +
+    'data-other-user-name="' + escapeHtml(displayName) + '" ' +
+    'data-other-user-avatar="' + escapeHtml(avatarUrl) + '">' +
     '<img class="chat-avatar" src="' + escapeHtml(avatarUrl) + '" alt="avatar">' +
     '<div class="chat-info">' +
       '<div class="chat-name">' + escapeHtml(displayName) + '</div>' +
@@ -1419,14 +1523,17 @@ function renderChatItem(chat) {
 
 async function renderChatWindow(chat) {
   const container = $('#chats-container');
+  const avatarUrl = chat.otherUserAvatar || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+
   container.innerHTML = '<div class="chat-window">' +
     '<div class="chat-header">' +
       '<button class="icon-btn" id="backToChats">←</button>' +
+      '<img class="chat-avatar" src="' + escapeHtml(avatarUrl) + '" alt="avatar" style="width:36px;height:36px;">' +
       '<div class="chat-info"><div class="chat-name">' + escapeHtml(chat.otherUserName || 'Чат') + '</div></div>' +
     '</div>' +
     '<div class="chat-messages" id="chatMessages"></div>' +
     '<div class="chat-input-area">' +
-      '<input type="text" class="chat-input" id="chatInput" placeholder="Напишите сообщение...">' +
+      '<input type="text" class="chat-input" id="chatInput" placeholder="Напишите сообщение..." maxlength="2000">' +
       '<button class="btn btn-primary" id="sendMessageBtn">➤</button>' +
     '</div>' +
   '</div>';
@@ -1451,8 +1558,9 @@ async function loadMessages() {
   try {
     const data = await apiGet('/api/chats/' + state.currentChat.id + '/messages');
     const messagesEl = $('#chatMessages');
+    if (!messagesEl) return;
     if (!data.items || data.items.length === 0) {
-      messagesEl.innerHTML = '<div class="empty-state"><div class="empty-text">Нет сообщений</div></div>';
+      messagesEl.innerHTML = '<div class="empty-state" style="padding:20px;"><div class="empty-text">Нет сообщений. Начните разговор!</div></div>';
       return;
     }
     messagesEl.innerHTML = data.items.map(m =>
@@ -1473,7 +1581,7 @@ async function sendMessage() {
     await apiPost('/api/chats/' + state.currentChat.id + '/messages', { text });
     input.value = '';
     await loadMessages();
-  } catch (e) { showToast(e.message, 'error'); }
+  } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
 }
 
 // ============================================
@@ -1485,10 +1593,14 @@ async function loadMyProfile() {
     container.innerHTML = '<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-text">Войдите через GitHub</div><a href="/auth/github" class="btn btn-primary mt-4">Войти</a></div>';
     return;
   }
+  container.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
   try {
     const profile = await apiGet('/api/profile/me');
+    state.user = profile;
+    updateAuthUI();
     container.innerHTML = renderProfile(profile, true);
     initProfileActions(profile);
+    setTimeout(initScrollReveal, 100);
   } catch (e) {
     container.innerHTML = '<div class="empty-state"><div class="empty-text">Ошибка: ' + escapeHtml(e.message) + '</div></div>';
   }
@@ -1499,12 +1611,15 @@ function renderProfile(profile, isMe) {
     ? 'background-image:url(' + escapeHtml(profile.bg_image_url) + ');'
     : 'background-color:' + (profile.bg_color || '#1a1a2e') + ';';
 
+  const avatarUrl = profile.avatar_url || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+  const displayName = (profile.profile_emoji || '') + ' ' + (profile.display_name || profile.username || '');
+
   return '<div class="profile-header" style="' + bgStyle + '">' +
     '<div class="profile-bg" style="' + bgStyle + '"></div>' +
     '<div class="profile-content">' +
-      '<img class="profile-avatar" src="' + escapeHtml(profile.avatar_url || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png') + '" alt="avatar">' +
-      '<div class="profile-name">' + escapeHtml(profile.profile_emoji || '') + ' ' + escapeHtml(profile.display_name || profile.username) + '</div>' +
-      '<div class="profile-username">@' + escapeHtml(profile.username) + '</div>' +
+      '<img class="profile-avatar" src="' + escapeHtml(avatarUrl) + '" alt="avatar">' +
+      '<div class="profile-name">' + escapeHtml(displayName.trim()) + '</div>' +
+      '<div class="profile-username">@' + escapeHtml(profile.username || '') + '</div>' +
       (profile.bio ? '<div class="profile-bio">' + escapeHtml(profile.bio) + '</div>' : '') +
       '<div class="profile-stats">' +
         '<div class="profile-stat"><div class="profile-stat-value">' + (profile.media_count || 0) + '</div><div class="profile-stat-label">постов</div></div>' +
@@ -1536,11 +1651,12 @@ function initProfileActions(profile) {
   const followBtn = $('#followBtn');
   if (followBtn) {
     followBtn.addEventListener('click', async () => {
+      if (!state.user) { showToast('Нужно войти', 'error'); return; }
       try {
         const data = await apiPost('/api/profile/' + profile.user_id + '/follow');
         followBtn.textContent = data.following ? 'Отписаться' : 'Подписаться';
         followBtn.className = 'btn ' + (data.following ? 'btn-following' : 'btn-follow');
-      } catch (e) { showToast(e.message, 'error'); }
+      } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
     });
   }
 }
@@ -1556,8 +1672,9 @@ $('#saveProfile').addEventListener('click', async () => {
       bg_image_url: $('#editBgImageUrl').value.trim()
     });
 
-    if ($('#editUsername').value.trim() && $('#editUsername').value.trim() !== state.user.username) {
-      await apiPut('/api/profile/username', { username: $('#editUsername').value.trim() });
+    const newUsername = $('#editUsername').value.trim();
+    if (newUsername && state.user && newUsername !== state.user.username) {
+      await apiPut('/api/profile/username', { username: newUsername });
     }
 
     showToast('Профиль обновлён!');
@@ -1565,7 +1682,7 @@ $('#saveProfile').addEventListener('click', async () => {
     state.user = null;
     await checkAuth();
     loadMyProfile();
-  } catch (e) { showToast(e.message, 'error'); }
+  } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
 });
 
 $('#cancelProfile').addEventListener('click', () => closeModal('profileModal'));
@@ -1585,21 +1702,37 @@ $('#confirmUpload').addEventListener('click', async () => {
 
   if (!file) { showToast('Выберите файл', 'error'); return; }
 
+  const maxMb = type === 'video' ? 3 : 0.5;
+  const maxBytes = maxMb * 1024 * 1024;
+  if (file.size > maxBytes) {
+    showToast('Файл слишком большой (макс ' + maxMb + ' МБ)', 'error');
+    return;
+  }
+
+  const btn = $('#confirmUpload');
+  btn.disabled = true;
+  btn.textContent = 'Загрузка...';
+
   try {
     const base64 = await fileToBase64(file);
     await apiPost('/api/media/upload', {
       type,
       mime: file.type,
       base64: base64.split(',')[1],
-      caption,
-      resolution: file.type.startsWith('image/') ? null : null
+      caption
     });
     showToast('Загружено!');
     closeModal('uploadModal');
     $('#uploadFile').value = '';
     $('#uploadCaption').value = '';
+    state.feedLoaded = false;
     switchSection('feed');
-  } catch (e) { showToast(e.message, 'error'); }
+  } catch (e) {
+    showToast('Ошибка: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Загрузить';
+  }
 });
 
 $('#cancelUpload').addEventListener('click', () => closeModal('uploadModal'));
@@ -1616,27 +1749,45 @@ function fileToBase64(file) {
 // ============================================
 // ПОИСК
 // ============================================
-$('#searchBtn').addEventListener('click', () => openModal('searchModal'));
-$('#closeSearch').addEventListener('click', () => closeModal('searchModal'));
+$('#searchBtn').addEventListener('click', () => {
+  openModal('searchModal');
+  setTimeout(() => $('#searchInput').focus(), 100);
+});
+$('#closeSearch').addEventListener('click', () => {
+  closeModal('searchModal');
+  $('#searchInput').value = '';
+  $('#searchResults').innerHTML = '';
+});
 
-$('#searchInput').addEventListener('input', async (e) => {
-  const q = e.target.value.trim();
+const debouncedSearch = debounce(async (q) => {
   const results = $('#searchResults');
   if (!q) { results.innerHTML = ''; return; }
   try {
     const data = await apiGet('/api/search?q=' + encodeURIComponent(q));
     let html = '';
     if (data.users && data.users.length > 0) {
-      html += '<h3 class="mt-4 mb-2">Пользователи</h3>';
-      html += data.users.map(u => '<div class="chat-item"><img class="chat-avatar" src="' + escapeHtml(u.avatar_url || '') + '"><div class="chat-info"><div class="chat-name">' + escapeHtml(u.name) + '</div></div></div>').join('');
+      html += '<h3 class="mt-4 mb-2" style="color:var(--accent-purple);">👥 Пользователи</h3>';
+      html += '<div class="chat-list">' + data.users.map(u => {
+        const name = u.display_name || u.name;
+        const avatar = u.avatar_url || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+        return '<div class="chat-item"><img class="chat-avatar" src="' + escapeHtml(avatar) + '"><div class="chat-info"><div class="chat-name">' + escapeHtml(name) + '</div><div class="chat-preview">@' + escapeHtml(u.name) + '</div></div></div>';
+      }).join('') + '</div>';
     }
     if (data.media && data.media.length > 0) {
-      html += '<h3 class="mt-4 mb-2">Контент</h3>';
+      html += '<h3 class="mt-4 mb-2" style="color:var(--accent-purple);">🎬 Контент</h3>';
       html += '<div class="media-grid">' + data.media.map(renderMediaCard).join('') + '</div>';
     }
     if (!html) html = '<div class="empty-state mt-4"><div class="empty-text">Ничего не найдено</div></div>';
     results.innerHTML = html;
-  } catch (e) {}
+    initMediaActions();
+    setTimeout(initScrollReveal, 100);
+  } catch (e) {
+    results.innerHTML = '<div class="empty-state"><div class="empty-text">Ошибка поиска</div></div>';
+  }
+}, 400);
+
+$('#searchInput').addEventListener('input', (e) => {
+  debouncedSearch(e.target.value.trim());
 });
 
 // ============================================
@@ -1684,7 +1835,8 @@ function animateParticles() {
 animateParticles();
 
 document.addEventListener('pointerdown', (e) => {
-  for (let i = 0; i < 8; i++) createParticle(e.clientX, e.clientY);
+  if (e.target.closest('.modal-overlay, .chat-input, .form-input, .form-textarea')) return;
+  for (let i = 0; i < 6; i++) createParticle(e.clientX, e.clientY);
 });
 
 // ============================================
@@ -1709,31 +1861,15 @@ function updateCursor() {
 updateCursor();
 
 document.addEventListener('mouseover', (e) => {
-  if (e.target.matches('button, a, .media-card, .chat-item, .icon-btn')) {
+  if (e.target.matches('button, a, .media-card, .chat-item, .icon-btn, input, textarea, select')) {
     cursor.classList.add('active');
   }
 });
 document.addEventListener('mouseout', (e) => {
-  if (e.target.matches('button, a, .media-card, .chat-item, .icon-btn')) {
+  if (e.target.matches('button, a, .media-card, .chat-item, .icon-btn, input, textarea, select')) {
     cursor.classList.remove('active');
   }
 });
-
-// ============================================
-// SCROLL REVEAL
-// ============================================
-function initScrollReveal() {
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-        observer.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  $$('.reveal').forEach(el => observer.observe(el));
-}
 
 // ============================================
 // ПАСХАЛКА (5 кликов на логотип)
@@ -1746,8 +1882,9 @@ $('#mainLogo').addEventListener('click', () => {
     for (let i = 0; i < 30; i++) {
       createParticle(window.innerWidth / 2, window.innerHeight / 2);
     }
-    showToast('🎃 Пасхалка активирована!');
+    showToast(document.body.classList.contains('easter-egg') ? '🎃 Пасхалка активирована!' : '🔄 Возвращаем в нормальный режим');
   }
+  setTimeout(() => { state.easterEggClicks = Math.max(0, state.easterEggClicks - 1); }, 2000);
 });
 
 // ============================================
@@ -1755,15 +1892,37 @@ $('#mainLogo').addEventListener('click', () => {
 // ============================================
 let lastScrollY = 0;
 let scrollVelocity = 0;
+let glitchTimeout;
 
 window.addEventListener('scroll', () => {
   const delta = Math.abs(window.scrollY - lastScrollY);
   scrollVelocity = delta;
   lastScrollY = window.scrollY;
 
-  if (scrollVelocity > 50) {
+  if (scrollVelocity > 50 && !document.body.classList.contains('easter-egg')) {
     document.body.style.filter = 'hue-rotate(' + (Math.random() * 20 - 10) + 'deg)';
-    setTimeout(() => { document.body.style.filter = ''; }, 100);
+    clearTimeout(glitchTimeout);
+    glitchTimeout = setTimeout(() => { document.body.style.filter = ''; }, 100);
+  }
+});
+
+// ============================================
+// ЗАКРЫТИЕ МОДАЛОК ПО КЛИКУ НА ОВЕРЛЕЙ
+// ============================================
+$$('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      overlay.classList.remove('active');
+    }
+  });
+});
+
+// ============================================
+// ЗАКРЫТИЕ МОДАЛОК ПО ESC
+// ============================================
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    $$('.modal-overlay.active').forEach(m => m.classList.remove('active'));
   }
 });
 
@@ -1773,12 +1932,21 @@ window.addEventListener('scroll', () => {
 checkAuth();
 initScrollReveal();
 
+// Обработка хеша URL
 if (window.location.hash && window.location.hash.startsWith('#')) {
   const section = window.location.hash.substring(1);
   if (['feed', 'streams', 'chats', 'profile'].includes(section)) {
-    switchSection(section);
+    setTimeout(() => switchSection(section), 100);
   }
 }
+
+// Service Worker для офлайн-режима (опционально)
+if ('serviceWorker' in navigator) {
+  // navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+console.log('%c🎃 SpookyTok', 'font-size: 32px; font-weight: bold; background: linear-gradient(135deg, #8b5cf6, #f97316); color: white; padding: 10px 20px; border-radius: 10px;');
+console.log('%cЖуткие истории в TikTok-стиле', 'font-size: 14px; color: #a0a0c0;');
 </script>
 </body>
 </html>`;
