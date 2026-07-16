@@ -4,7 +4,7 @@
  * Cloudflare Workers + D1 + Shards
  */
 
-import { json, requireUser } from './utils.js';
+import { json } from './utils.js';
 import { githubLoginRedirect, githubCallback } from './auth.js';
 import {
   handleGetMyProfile,
@@ -41,59 +41,95 @@ import { handleSearch } from './search.js';
 import INDEX_HTML from './index.html.js';
 
 // ============================================
-// Вспомогательные функции
+// КРИТИЧНО: CORS HEADERS (динамический Origin)
 // ============================================
-
-function notFound() {
-  return new Response('404 Not Found', {
-    status: 404,
-    headers: { 'Content-Type': 'text/plain' }
-  });
-}
-
-function corsHeaders() {
+// БРАУЗЕРЫ БЛОКИРУЮТ 'Access-Control-Allow-Origin: *' ВМЕСТЕ С 'credentials: include'!
+// Поэтому берём Origin из запроса и возвращаем его же.
+function corsHeaders(request) {
+  const origin = request.headers.get('Origin');
   return {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': origin || '*',
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Cookie',
-    'Access-Control-Allow-Credentials': 'true'
+    'Access-Control-Allow-Headers': 'Content-Type, Cookie, Authorization',
+    'Vary': 'Origin',
   };
 }
 
-// ============================================
-// Парсинг URL с параметрами
-// ============================================
+// Оборачивает любой Response добавляя CORS headers
+function withCors(request, response) {
+  const headers = new Headers(response.headers);
+  for (const [key, value] of Object.entries(corsHeaders(request))) {
+    headers.set(key, value);
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
 
+// ============================================
+// ОБЁРТКА ОБРАБОТЧИКОВ (ловит все ошибки)
+// ============================================
+// Без этого при любой ошибке в handler-е Worker падает с 500 БЕЗ тела,
+// и фронтенд получает пустой ответ → всё ломается.
+async function safeHandler(request, handler) {
+  try {
+    const response = await handler();
+    return withCors(request, response);
+  } catch (err) {
+    console.error('❌ Handler error:', err);
+    return withCors(request, json(
+      { error: err.message || 'internal_server_error' },
+      500
+    ));
+  }
+}
+
+function notFound(request) {
+  return withCors(request, new Response('404 Not Found', {
+    status: 404,
+    headers: { 'Content-Type': 'text/plain' }
+  }));
+}
+
+// ============================================
+// ПАРСИНГ URL
+// ============================================
 function parsePath(pathname) {
-  const parts = pathname.split('/').filter(Boolean);
-  return parts;
+  return pathname.split('/').filter(Boolean);
 }
 
 // ============================================
 // ОБРАБОТЧИК ЗАПРОСОВ
 // ============================================
-
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
     const method = request.method;
 
-    // CORS preflight
+    // Удобная обёртка: передаём async-функцию, получаем Response с CORS и обработкой ошибок
+    const wrap = (handler) => safeHandler(request, handler);
+
+    // ==========================================
+    // CORS PREFLIGHT (OPTIONS)
+    // ==========================================
     if (method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders() });
+      return new Response(null, { status: 204, headers: corsHeaders(request) });
     }
 
     // ==========================================
     // ГЛАВНАЯ СТРАНИЦА
     // ==========================================
     if (pathname === '/' || pathname === '/index.html') {
-      return new Response(INDEX_HTML, {
+      return withCors(request, new Response(INDEX_HTML, {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
           'Cache-Control': 'public, max-age=3600'
         }
-      });
+      }));
     }
 
     // ==========================================
@@ -113,15 +149,15 @@ export default {
     // API: МЕДИА
     // ==========================================
     if (pathname === '/api/media/upload' && method === 'POST') {
-      return handleUpload(request, env);
+      return wrap(() => handleUpload(request, env));
     }
 
     if (pathname === '/api/media/feed' && method === 'GET') {
-      return handleFeed(request, env);
+      return wrap(() => handleFeed(request, env));
     }
 
     if (pathname === '/api/search' && method === 'GET') {
-      return handleSearch(request, env);
+      return wrap(() => handleSearch(request, env));
     }
 
     // /api/media/:id — динамические роуты
@@ -130,22 +166,22 @@ export default {
       const mediaId = mediaParts[2];
 
       if (mediaParts[3] === 'like' && method === 'POST') {
-        return handleLike(request, env, mediaId);
+        return wrap(() => handleLike(request, env, mediaId));
       }
       if (mediaParts[3] === 'save' && method === 'POST') {
-        return handleSave(request, env, mediaId);
+        return wrap(() => handleSave(request, env, mediaId));
       }
       if (mediaParts[3] === 'comment' && method === 'POST') {
-        return handleComment(request, env, mediaId);
+        return wrap(() => handleComment(request, env, mediaId));
       }
       if (mediaParts[3] === 'comments' && method === 'GET') {
-        return handleListComments(request, env, mediaId);
+        return wrap(() => handleListComments(request, env, mediaId));
       }
       if (method === 'GET' && !mediaParts[3]) {
-        return handleMediaContent(request, env, mediaId);
+        return wrap(() => handleMediaContent(request, env, mediaId));
       }
       if (method === 'DELETE' && !mediaParts[3]) {
-        return handleDeleteMedia(request, env, mediaId);
+        return wrap(() => handleDeleteMedia(request, env, mediaId));
       }
     }
 
@@ -153,15 +189,15 @@ export default {
     // API: ПРОФИЛЬ
     // ==========================================
     if (pathname === '/api/profile/me' && method === 'GET') {
-      return handleGetMyProfile(request, env);
+      return wrap(() => handleGetMyProfile(request, env));
     }
 
     if (pathname === '/api/profile' && method === 'PUT') {
-      return handleUpdateProfile(request, env);
+      return wrap(() => handleUpdateProfile(request, env));
     }
 
     if (pathname === '/api/profile/username' && method === 'PUT') {
-      return handleChangeUsername(request, env);
+      return wrap(() => handleChangeUsername(request, env));
     }
 
     // /api/profile/:userId
@@ -170,16 +206,16 @@ export default {
       const userId = profileParts[2];
 
       if (profileParts[3] === 'follow' && method === 'POST') {
-        return handleFollow(request, env, userId);
+        return wrap(() => handleFollow(request, env, userId));
       }
       if (profileParts[3] === 'followers' && method === 'GET') {
-        return handleGetFollowers(request, env, userId);
+        return wrap(() => handleGetFollowers(request, env, userId));
       }
       if (profileParts[3] === 'following' && method === 'GET') {
-        return handleGetFollowing(request, env, userId);
+        return wrap(() => handleGetFollowing(request, env, userId));
       }
       if (!profileParts[3] && method === 'GET') {
-        return handleGetUserProfile(request, env, userId);
+        return wrap(() => handleGetUserProfile(request, env, userId));
       }
     }
 
@@ -187,11 +223,11 @@ export default {
     // API: СТРИМЫ
     // ==========================================
     if (pathname === '/api/streams' && method === 'GET') {
-      return handleListStreams(request, env);
+      return wrap(() => handleListStreams(request, env));
     }
 
     if (pathname === '/api/streams' && method === 'POST') {
-      return handleCreateStream(request, env);
+      return wrap(() => handleCreateStream(request, env));
     }
 
     const streamParts = parsePath(pathname);
@@ -199,10 +235,10 @@ export default {
       const streamId = streamParts[2];
 
       if (streamParts[3] === 'end' && method === 'POST') {
-        return handleEndStream(request, env, streamId);
+        return wrap(() => handleEndStream(request, env, streamId));
       }
       if (!streamParts[3] && method === 'DELETE') {
-        return handleDeleteStream(request, env, streamId);
+        return wrap(() => handleDeleteStream(request, env, streamId));
       }
     }
 
@@ -210,11 +246,11 @@ export default {
     // API: ЧАТЫ
     // ==========================================
     if (pathname === '/api/chats' && method === 'GET') {
-      return handleListChats(request, env);
+      return wrap(() => handleListChats(request, env));
     }
 
     if (pathname === '/api/chats/open' && method === 'POST') {
-      return handleOpenChat(request, env);
+      return wrap(() => handleOpenChat(request, env));
     }
 
     const chatParts = parsePath(pathname);
@@ -222,16 +258,16 @@ export default {
       const chatId = chatParts[2];
 
       if (chatParts[3] === 'messages' && method === 'POST') {
-        return handleSendMessage(request, env, chatId);
+        return wrap(() => handleSendMessage(request, env, chatId));
       }
       if (chatParts[3] === 'messages' && method === 'GET') {
-        return handleGetMessages(request, env, chatId);
+        return wrap(() => handleGetMessages(request, env, chatId));
       }
     }
 
     // ==========================================
     // НЕ НАЙДЕНО
     // ==========================================
-    return notFound();
+    return notFound(request);
   }
 };
