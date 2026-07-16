@@ -2060,6 +2060,162 @@ if (window.location.hash && window.location.hash.startsWith('#')) {
 
 console.log('%c🎃 SpookyTok', 'font-size: 32px; font-weight: bold; background: linear-gradient(135deg, #8b5cf6, #f97316); color: white; padding: 10px 20px; border-radius: 10px;');
 console.log('%cЖуткие истории в TikTok-стиле', 'font-size: 14px; color: #a0a0c0;');
+// ====== ПАТЧ: Посты и Сохранения в профиле ======
+const _origLoadMyProfile = loadMyProfile;
+loadMyProfile = async function() {
+  const c = $('#profile-container');
+  if (!state.user) {
+    c.innerHTML = '<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-text">Войдите через GitHub</div><a href="/auth/github" class="btn btn-primary mt-4">Войти</a></div>';
+    return;
+  }
+  c.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
+  try {
+    const p = await apiGet('/api/profile/me');
+    state.user = p;
+    updateAuthUI();
+    const bg = (p.bg_color && /^#[0-9A-Fa-f]{6}$/.test(p.bg_color)) ? p.bg_color : '#1a1a2e';
+    const bs = p.bg_image_url ? 'background-image:url(' + escapeHtml(p.bg_image_url) + ')' : 'background-color:' + bg;
+    const av = p.avatar_url || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+    const dn = (p.profile_emoji || '') + ' ' + (p.display_name || p.username || '');
+    c.innerHTML = '<div class="profile-header" style="' + bs + '"><div class="profile-bg" style="' + bs + '"></div><div class="profile-content"><img class="profile-avatar" src="' + escapeHtml(av) + '"><div class="profile-name">' + escapeHtml(dn.trim()) + '</div><div class="profile-username">@' + escapeHtml(p.username || '') + '</div>' + (p.bio ? '<div class="profile-bio">' + escapeHtml(p.bio) + '</div>' : '') + '<div class="profile-stats"><div class="profile-stat"><div class="profile-stat-value">' + (p.media_count || 0) + '</div><div class="profile-stat-label">постов</div></div><div class="profile-stat"><div class="profile-stat-value">' + (p.followers_count || 0) + '</div><div class="profile-stat-label">подписчиков</div></div><div class="profile-stat"><div class="profile-stat-value">' + (p.following_count || 0) + '</div><div class="profile-stat-label">подписок</div></div></div><div class="profile-actions"><button class="btn btn-primary" id="editProfileBtn">✏️ Редактировать</button></div></div></div><div class="profile-tabs" style="display:flex;gap:12px;margin:20px 0 16px;"><button class="btn btn-primary profile-tab" data-tab="posts" style="padding:10px 20px;border-radius:12px;border:none;font-size:14px;font-weight:600;cursor:pointer;background:linear-gradient(135deg,var(--accent-purple),var(--accent-pink));color:white">📝 Посты</button><button class="btn btn-secondary profile-tab" data-tab="saves" style="padding:10px 20px;border-radius:12px;border:1px solid var(--border);font-size:14px;font-weight:600;cursor:pointer;background:var(--bg-card);color:var(--text-primary)">🔖 Сохранённые</button></div><div id="profile-posts"><div id="profile-media"></div></div><div id="profile-saves" style="display:none;"><div id="saves-media"></div></div>';
+    $('#editProfileBtn').addEventListener('click', () => {
+      $('#editDisplayName').value = p.display_name || '';
+      $('#editUsername').value = p.username || '';
+      $('#editBio').value = p.bio || '';
+      $('#editProfileEmoji').value = p.profile_emoji || '👻';
+      $('#editBgColor').value = p.bg_color || '#1a1a2e';
+      $('#editBgImageUrl').value = p.bg_image_url || '';
+      $('#editAvatarUrl').value = p.avatar_url || '';
+      openModal('profileModal');
+    });
+    $$('.profile-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        $$('.profile-tab').forEach(t => {
+          t.style.background = 'var(--bg-card)';
+          t.style.color = 'var(--text-primary)';
+          t.style.border = '1px solid var(--border)';
+        });
+        tab.style.background = 'linear-gradient(135deg,var(--accent-purple),var(--accent-pink))';
+        tab.style.color = 'white';
+        tab.style.border = 'none';
+        const tn = tab.dataset.tab;
+        $('#profile-posts').style.display = tn === 'posts' ? 'block' : 'none';
+        $('#profile-saves').style.display = tn === 'saves' ? 'block' : 'none';
+        if (tn === 'saves') loadUserSaves();
+      });
+    });
+    loadUserPosts(p.user_id);
+    setTimeout(initScrollReveal, 100);
+  } catch (e) {
+    c.innerHTML = '<div class="empty-state"><div class="empty-text">' + escapeHtml(e.message) + '</div></div>';
+  }
+};
+
+async function loadUserPosts(uid) {
+  const c = $('#profile-media');
+  if (!c) return;
+  c.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
+  try {
+    const d = await apiGet('/api/media/feed?user_id=' + uid + '&limit=30');
+    if (!d.items || !d.items.length) {
+      c.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Пока нет постов</div></div>';
+      return;
+    }
+    c.innerHTML = '<div class="media-grid">' + d.items.map(renderMediaCard).join('') + '</div>';
+    initMediaActions();
+    initMediaVideoHover();
+    setTimeout(initScrollReveal, 50);
+  } catch (e) {
+    c.innerHTML = '<div class="empty-state"><div class="empty-text">Ошибка</div></div>';
+  }
+}
+
+async function loadUserSaves() {
+  const c = $('#saves-media');
+  if (!c) return;
+  c.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
+  try {
+    const d = await apiGet('/api/media/saved');
+    if (!d.items || !d.items.length) {
+      c.innerHTML = '<div class="empty-state"><div class="empty-icon">🔖</div><div class="empty-text">Нет сохранённых постов</div></div>';
+      return;
+    }
+    c.innerHTML = '<div class="media-grid">' + d.items.map(renderMediaCard).join('') + '</div>';
+    initMediaActions();
+    setTimeout(initScrollReveal, 50);
+  } catch (e) {
+    c.innerHTML = '<div class="empty-state"><div class="empty-text">' + escapeHtml(e.message) + '</div></div>';
+  }
+}
+
+// ====== ПАТЧ: Кнопка "+" в чатах ======
+const _origLoadChats = loadChats;
+loadChats = async function() {
+  const c = $('#chats-container');
+  if (state.currentChat) { renderChatWindow(state.currentChat); return; }
+  if (!state.user) { c.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><div class="empty-text">Войдите</div></div>'; return; }
+  const hdr = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><h2 style="font-size:20px;font-weight:700">Ваши чаты</h2><button class="btn btn-primary" id="newChatBtn" style="padding:8px 16px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent-purple),var(--accent-pink));color:white;font-weight:600;cursor:pointer">+ Новый чат</button></div>';
+  c.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
+  try {
+    const d = await apiGet('/api/chats');
+    let list;
+    if (!d.items || !d.items.length) {
+      list = '<div class="empty-state"><div class="empty-icon">💬</div><div class="empty-text">Нет чатов</div></div>';
+    } else {
+      list = '<div class="chat-list">' + d.items.map(ch => {
+        const dn = ch.other_user_display_name || ch.other_user_name || ('User ' + (ch.other_user_id||'').substring(0,8));
+        const av = ch.other_user_avatar || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+        return '<div class="chat-item" data-chat-id="' + escapeHtml(ch.id) + '" data-other-user-id="' + escapeHtml(ch.other_user_id) + '" data-other-user-name="' + escapeHtml(dn) + '" data-other-user-avatar="' + escapeHtml(av) + '"><img class="chat-avatar" src="' + escapeHtml(av) + '"><div class="chat-info"><div class="chat-name">' + escapeHtml(dn) + '</div><div class="chat-preview">Нажмите чтобы открыть</div></div></div>';
+      }).join('') + '</div>';
+    }
+    c.innerHTML = hdr + list;
+    $('#newChatBtn').addEventListener('click', openNewChatModal);
+    $$('.chat-item').forEach(i => i.addEventListener('click', () => {
+      state.currentChat = { id: i.dataset.chatId, otherUserId: i.dataset.ouid || i.dataset.otherUserId, otherUserName: i.dataset.oun || i.dataset.otherUserName, otherUserAvatar: i.dataset.oav || i.dataset.otherUserAvatar };
+      loadChats();
+    }));
+  } catch (e) {
+    c.innerHTML = hdr + '<div class="empty-state"><div class="empty-text">' + escapeHtml(e.message) + '</div></div>';
+    const nb = $('#newChatBtn'); if (nb) nb.addEventListener('click', openNewChatModal);
+  }
+};
+
+function openNewChatModal() {
+  let m = $('#newChatModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'newChatModal';
+    m.className = 'modal-overlay';
+    m.innerHTML = '<div class="modal"><h2 class="modal-title">✉️ Новый чат</h2><div class="form-group"><label class="form-label">Username (без @)</label><input type="text" class="form-input" id="ncUser" placeholder="Negr" autocomplete="off"></div><div id="ncResult"></div><div class="modal-actions"><button class="btn btn-secondary" id="ncCancel">Отмена</button><button class="btn btn-primary" id="ncFind">Найти</button></div></div>';
+    document.body.appendChild(m);
+    $('#ncCancel').addEventListener('click', () => m.classList.remove('active'));
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+  }
+  $('#ncUser').value = '';
+  $('#ncResult').innerHTML = '';
+  m.classList.add('active');
+  setTimeout(() => $('#ncUser').focus(), 100);
+  const find = async () => {
+    const u = $('#ncUser').value.trim().replace(/^@/, '');
+    const r = $('#ncResult');
+    if (!u) { r.innerHTML = '<div style="color:var(--danger)">Введите username</div>'; return; }
+    r.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
+    try {
+      const user = await apiGet('/api/users/by-username/' + encodeURIComponent(u));
+      r.innerHTML = '<div class="chat-item" style="margin-top:12px"><img class="chat-avatar" src="' + escapeHtml(user.avatar_url || '') + '"><div class="chat-info"><div class="chat-name">' + escapeHtml(user.display_name) + '</div><div class="chat-preview">@' + escapeHtml(user.name) + '</div></div><button class="btn btn-primary" id="ncStart" data-uid="' + escapeHtml(user.id) + '">Начать</button></div>';
+      $('#ncStart').addEventListener('click', async () => {
+        try {
+          const res = await apiPost('/api/chats/open', { with_user_id: user.id });
+          m.classList.remove('active');
+          state.currentChat = { id: res.chat.id, otherUserId: user.id, otherUserName: user.display_name, otherUserAvatar: user.avatar_url };
+          loadChats();
+        } catch (e) { showToast(e.message, 'error'); }
+      });
+    } catch (e) { r.innerHTML = '<div style="color:var(--danger)">Пользователь не найден</div>'; }
+  };
+  $('#ncFind').onclick = find;
+  $('#ncUser').onkeypress = e => { if (e.key === 'Enter') find(); };
+}
 </script>
 </body>
 </html>`;
