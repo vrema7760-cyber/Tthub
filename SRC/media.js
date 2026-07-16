@@ -86,7 +86,7 @@ export async function handleDeleteMedia(request, env, mediaId) {
   if (!media) return json({ error: 'not_found' }, 404);
   if (media.deleted_at) return json({ error: 'already_deleted' }, 400);
 
-  const isAdmin = user.name === 'vrema7760-cyber';
+  const isAdmin = user.name === 'Negr';
   const isOwner = media.user_id === user.id;
 
   if (!isAdmin && !isOwner) {
