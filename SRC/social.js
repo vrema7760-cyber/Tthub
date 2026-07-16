@@ -32,9 +32,10 @@ export async function handleSave(request, env, mediaId) {
 
   if (existing) {
     await env.DB.batch([
-      env.DB.prepare('DELETE FROM saves WHERE user_id = ? AND media_id = ?').bind(user.id, mediaId),
-      env.DB.prepare('UPDATE media SET saves_count = saves_count - 1 WHERE id = ?').bind(mediaId),
-    ]);
+  env.DB.prepare('INSERT INTO saves (user_id, media_id, created_at) VALUES (?, ?, ?)')
+    .bind(user.id, mediaId, Date.now()),
+  env.DB.prepare('UPDATE media SET saves_count = saves_count + 1 WHERE id = ?').bind(mediaId),
+]);
     return json({ saved: false });
   } else {
     await env.DB.batch([
