@@ -2576,6 +2576,287 @@ if (_origLoadComments) {
 })();
 
 console.log('✅ SpookyTok патчи загружены: aurora-bg, авто-удаление стримов, клик по пользователю');
+// ============================================================
+// 🔧 ИСПРАВЛЕННЫЙ ПАТЧ: Aurora + Стримы + Чаты (безопасная версия)
+// ============================================================
+
+// ПАТЧ 1: Гарантия что Aurora фон всегда виден
+(function ensureAuroraAlwaysVisible() {
+  const ensure = () => {
+    let bg = document.querySelector('.aurora-bg');
+    if (!bg) {
+      bg = document.createElement('div');
+      bg.className = 'aurora-bg';
+      bg.innerHTML = '<div class="aurora-blob"></div><div class="aurora-blob"></div><div class="aurora-blob"></div>';
+      document.body.insertBefore(bg, document.body.firstChild);
+    }
+    const blobs = bg.querySelectorAll('.aurora-blob');
+    if (blobs.length === 0) {
+      bg.innerHTML = '<div class="aurora-blob"></div><div class="aurora-blob"></div><div class="aurora-blob"></div>';
+    }
+  };
+  ensure();
+  setTimeout(ensure, 500);
+  setTimeout(ensure, 2000);
+})();
+
+// ПАТЧ 2: Улучшенные стримы с автоудалением битых
+function isValidStreamUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  const u = url.trim();
+  if (!u) return false;
+  if (/youtube\.com\/watch\?v=/.test(u)) return true;
+  if (/youtu\.be\//.test(u)) return true;
+  if (/youtube\.com\/embed\//.test(u)) return true;
+  if (/twitch\.tv\//.test(u)) return true;
+  if (/vimeo\.com\/\d+/.test(u)) return true;
+  try { new URL(u); return true; } catch { return false; }
+}
+
+function extractYouTubeId(url) {
+  if (!url) return null;
+  const m1 = url.match(/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/);
+  if (m1) return m1[1];
+  const m2 = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+  if (m2) return m2[1];
+  const m3 = url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/);
+  if (m3) return m3[1];
+  return null;
+}
+
+const _origLoadStreams = loadStreams;
+loadStreams = async function() {
+  const container = $('#streams-container');
+  container.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
+  try {
+    const data = await apiGet('/api/streams?limit=50');
+    const allStreams = data.items || [];
+    
+    const validStreams = allStreams.filter(s => isValidStreamUrl(s.stream_url));
+    const invalidStreams = allStreams.filter(s => !isValidStreamUrl(s.stream_url));
+    
+    const isAdmin = state.user && (
+      (state.user.username || '').toLowerCase() === 'negr' ||
+      (state.user.name || '').toLowerCase() === 'negr'
+    );
+    
+    if (isAdmin && invalidStreams.length > 0) {
+      console.log('🗑️ Удаляю ' + invalidStreams.length + ' нерабочих стримов...');
+      for (const bad of invalidStreams) {
+        try { await apiDelete('/api/streams/' + bad.id); } catch (e) {}
+      }
+      if (invalidStreams.length > 0) {
+        showToast('🧹 Удалено нерабочих стримов: ' + invalidStreams.length, 'success');
+      }
+    }
+    
+    const liveStreams = validStreams.filter(s => s.is_live === 1 || s.is_live === true);
+    const count = liveStreams.length;
+    
+    $('#liveCount').textContent = count + (count === 1 ? ' стрим' : ' стримов');
+    
+    if (count === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-icon">📺</div><div class="empty-text">Нет активных стримов. Начните свой!</div></div>';
+      return;
+    }
+    
+    container.innerHTML = '<div class="streams-scroll">' + liveStreams.map(s => {
+      let embedUrl = s.stream_url || '';
+      let thumbnailUrl = s.thumbnail_url || '';
+      const videoId = extractYouTubeId(embedUrl);
+      
+      if (/youtube\.com\/watch\?v=/.test(embedUrl)) embedUrl = 'https://www.youtube.com/embed/' + videoId;
+      else if (/youtu\.be\//.test(embedUrl)) embedUrl = 'https://www.youtube.com/embed/' + videoId;
+      else if (/vimeo\.com\/(\d+)/.test(embedUrl)) embedUrl = 'https://player.vimeo.com/video/' + embedUrl.match(/vimeo\.com\/(\d+)/)[1];
+      
+      if (!thumbnailUrl && videoId) thumbnailUrl = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
+      
+      const authorName = s.author_display_name || s.author_name || 'Стример';
+      const isOwner = state.user && state.user.user_id === s.user_id;
+      const canDelete = isOwner || isAdmin;
+      
+      const previewHtml = thumbnailUrl
+        ? '<div class="stream-thumb" style="position:relative;width:100%;height:100%;background:#000 url(\'' + escapeHtml(thumbnailUrl) + '\') center/cover no-repeat;cursor:pointer;display:flex;align-items:center;justify-content:center;">' +
+            '<div style="width:60px;height:60px;background:rgba(239,68,68,0.9);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;color:white;box-shadow:0 4px 20px rgba(0,0,0,0.5);">▶</div>' +
+            '<div style="position:absolute;top:10px;right:10px;background:rgba(239,68,68,0.9);color:white;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;">LIVE</div>' +
+          '</div>'
+        : '<div style="position:relative;width:100%;height:100%;background:linear-gradient(135deg,#1a1a2e,#0a0a1a);display:flex;align-items:center;justify-content:center;font-size:48px;">📺</div>';
+      
+      const deleteBtn = canDelete
+        ? '<button class="stream-delete-btn" data-stream-id="' + escapeHtml(s.id) + '" style="position:absolute;bottom:10px;right:10px;background:rgba(239,68,68,0.9);color:white;border:none;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;z-index:10;backdrop-filter:blur(10px);" title="Удалить стрим">🗑️ Удалить</button>'
+        : '';
+      
+      return '<div class="stream-card reveal" style="position:relative;">' +
+        '<div class="stream-preview" data-embed="' + escapeHtml(embedUrl) + '" style="position:relative;">' +
+          previewHtml +
+          deleteBtn +
+        '</div>' +
+        '<div class="stream-info">' +
+          '<div class="stream-title">' + escapeHtml(s.title || 'Без названия') + '</div>' +
+          '<div class="stream-author">' + escapeHtml(authorName) + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+    
+    container.querySelectorAll('.stream-thumb').forEach(thumb => {
+      thumb.addEventListener('click', () => {
+        const preview = thumb.parentElement;
+        const embedUrl = preview.dataset.embed;
+        preview.innerHTML = '<iframe src="' + escapeHtml(embedUrl) + '" allowfullscreen allow="autoplay; encrypted-media" style="width:100%;height:100%;border:none;"></iframe>';
+      });
+    });
+    
+    container.querySelectorAll('.stream-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm('Удалить этот стрим?')) return;
+        try {
+          await apiDelete('/api/streams/' + btn.dataset.streamId);
+          showToast('Стрим удалён');
+          btn.closest('.stream-card').remove();
+          const newCount = container.querySelectorAll('.stream-card').length;
+          $('#liveCount').textContent = newCount + ' стримов';
+        } catch (e) {
+          showToast('Ошибка: ' + e.message, 'error');
+        }
+      });
+    });
+  } catch (e) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-text">Ошибка: ' + escapeHtml(e.message) + '</div></div>';
+  }
+};
+
+// ПАТЧ 3: Кнопка чата в карточках постов (безопасная версия)
+async function openChatWith(username) {
+  if (!state.user) {
+    showToast('Нужно войти, чтобы общаться', 'error');
+    return;
+  }
+  if (username === state.user.username || username === state.user.name) {
+    showToast('Это вы сами 😅', 'error');
+    return;
+  }
+  
+  showToast('🔎 Ищу пользователя @' + username + '...', 'success');
+  
+  try {
+    const user = await apiGet('/api/users/by-username/' + encodeURIComponent(username));
+    const res = await apiPost('/api/chats/open', { with_user_id: user.id });
+    
+    showToast('💬 Открываю чат с ' + (user.display_name || user.name), 'success');
+    
+    state.currentChat = {
+      id: res.chat.id,
+      otherUserId: user.id,
+      otherUserName: user.display_name || user.name,
+      otherUserAvatar: user.avatar_url
+    };
+    
+    switchSection('chats');
+  } catch (e) {
+    if (e.message && e.message.includes('user_not_found')) {
+      showToast('Пользователь @' + username + ' не найден', 'error');
+    } else {
+      showToast('Ошибка: ' + e.message, 'error');
+    }
+  }
+}
+
+// Делегирование кликов — только по специальной кнопке чата
+document.addEventListener('click', (e) => {
+  const chatBtn = e.target.closest('.chat-with-author-btn');
+  if (chatBtn) {
+    e.stopPropagation();
+    const username = chatBtn.dataset.username;
+    if (username && username !== 'Аноним') {
+      openChatWith(username);
+    }
+  }
+});
+
+// Переопределяем renderMediaCard — добавляем кнопку чата
+const _origRenderMediaCard = renderMediaCard;
+renderMediaCard = function(item) {
+  const previewUrl = '/api/media/' + item.id;
+  const isVideo = item.type === 'video';
+  const authorAvatar = item.author_avatar || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+  const authorName = item.author_name || 'Аноним';
+  const canDelete = state.user && (state.user.user_id === item.user_id || state.user.username === 'Negr');
+  const showChatBtn = state.user && authorName !== 'Аноним' && authorName !== state.user.username && authorName !== state.user.name;
+
+  return '<div class="media-card reveal">' +
+    '<div class="media-preview">' +
+      (isVideo
+        ? '<video src="' + previewUrl + '" muted loop playsinline preload="metadata"></video>'
+        : '<img src="' + previewUrl + '" alt="media" loading="lazy">') +
+      '<span class="media-type-badge">' + (isVideo ? '🎬 Видео' : '📷 Фото') + '</span>' +
+    '</div>' +
+    '<div class="media-info">' +
+      '<div class="media-author">' +
+        '<img src="' + escapeHtml(authorAvatar) + '" alt="avatar">' +
+        '<span>' + escapeHtml(authorName) + '</span>' +
+        (showChatBtn ? '<button class="chat-with-author-btn" data-username="' + escapeHtml(authorName) + '" style="margin-left:auto;background:var(--accent-purple);color:white;border:none;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;" title="Написать автору">💬 Чат</button>' : '') +
+      '</div>' +
+      (item.caption ? '<div class="media-caption">' + escapeHtml(item.caption) + '</div>' : '') +
+      '<div class="media-actions">' +
+        '<button class="media-action like-btn" data-id="' + item.id + '">❤️ <span>' + (item.likes_count || 0) + '</span></button>' +
+        '<button class="media-action comment-btn" data-id="' + item.id + '">💬 <span>' + (item.comments_count || 0) + '</span></button>' +
+        '<button class="media-action save-btn" data-id="' + item.id + '">🔖 <span>' + (item.saves_count || 0) + '</span></button>' +
+        (canDelete ? '<button class="media-action delete-btn" data-id="' + item.id + '">🗑️</button>' : '') +
+      '</div>' +
+    '</div>' +
+  '</div>';
+};
+
+// ПАТЧ 4: Улучшенные комментарии с кликабельными авторами
+if (typeof loadComments === 'function') {
+  const _origLoadComments = loadComments;
+  loadComments = async function(mediaId) {
+    const list = $('#commentsList');
+    if (!list) return;
+    list.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
+    try {
+      const data = await apiGet('/api/media/' + mediaId + '/comments');
+      if (!data.items || data.items.length === 0) {
+        list.innerHTML = '<div class="empty-state" style="padding:20px;"><div class="empty-text">Пока нет комментариев</div></div>';
+        return;
+      }
+      list.innerHTML = data.items.map(c => {
+        const avatar = c.author_avatar || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+        const username = c.author_name || 'Аноним';
+        const isMe = state.user && state.user.user_id === c.user_id;
+        const showChatBtn = state.user && username !== 'Аноним' && !isMe;
+        return '<div style="display:flex;gap:10px;padding:10px;border-bottom:1px solid var(--border);">' +
+          '<img src="' + escapeHtml(avatar) + '" style="width:32px;height:32px;border-radius:50%;flex-shrink:0;object-fit:cover;">' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;">' +
+              '<span>' + escapeHtml(username) + (isMe ? ' <span style="color:var(--accent-purple);font-size:11px;">(вы)</span>' : '') + '</span>' +
+              (showChatBtn ? '<button class="chat-with-author-btn" data-username="' + escapeHtml(username) + '" style="background:var(--accent-purple);color:white;border:none;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;">💬</button>' : '') +
+            '</div>' +
+            '<div style="font-size:14px;margin-top:2px;word-break:break-word;">' + escapeHtml(c.text) + '</div>' +
+            '<div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">' + timeAgo(c.created_at) + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    } catch (e) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-text">Ошибка загрузки</div></div>';
+    }
+  };
+}
+
+// ПАТЧ 5: CSS стили для кнопок чата
+(function addChatButtonStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
+    .chat-with-author-btn { transition: all 0.2s; }
+    .chat-with-author-btn:hover { transform: scale(1.05); opacity: 0.9; }
+    .stream-delete-btn { transition: all 0.2s; }
+    .stream-delete-btn:hover { background: rgba(220, 38, 38, 1) !important; transform: scale(1.05); }
+  `;
+  document.head.appendChild(style);
+})();
+
+console.log('✅ Безопасные патчи загружены: Aurora, стримы, кнопки чата');
 </script>
 </body>
 </html>`;
