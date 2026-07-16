@@ -1,110 +1,237 @@
-import { json } from './utils.js';
-import { getCurrentUser } from './utils.js';
+/**
+ * 🎃 SpookyTok — главный Cloudflare Worker
+ * TikTok-стиль платформа с жуткой эстетикой
+ * Cloudflare Workers + D1 + Shards
+ */
+
+import { json, requireUser } from './utils.js';
 import { githubLoginRedirect, githubCallback } from './auth.js';
-import { handleUpload, handleFeed, handleMediaContent, handleDeleteMedia } from './media.js';
-import { handleLike, handleSave, handleComment, handleListComments } from './social.js';
-import { handleListChats, handleOpenChat, handleSendMessage, handleGetMessages } from './chat.js';
-import { handleSearch } from './search.js';
 import {
-  handleGetMyProfile, handleGetUserProfile, handleUpdateProfile, handleChangeUsername,
-  handleListStreams, handleCreateStream, handleDeleteStream, handleEndStream,
-  handleFollow, handleGetFollowStatus, handleGetFollowers, handleGetFollowing
+  handleGetMyProfile,
+  handleGetUserProfile,
+  handleUpdateProfile,
+  handleChangeUsername,
+  handleListStreams,
+  handleCreateStream,
+  handleDeleteStream,
+  handleEndStream,
+  handleFollow,
+  handleGetFollowers,
+  handleGetFollowing
 } from './profile.js';
+import {
+  handleUpload,
+  handleFeed,
+  handleMediaContent,
+  handleDeleteMedia
+} from './media.js';
+import {
+  handleListChats,
+  handleOpenChat,
+  handleSendMessage,
+  handleGetMessages
+} from './chat.js';
+import {
+  handleLike,
+  handleSave,
+  handleComment,
+  handleListComments
+} from './social.js';
+import { handleSearch } from './search.js';
+import INDEX_HTML from './index.html.js';
+
+// ============================================
+// Вспомогательные функции
+// ============================================
+
+function notFound() {
+  return new Response('404 Not Found', {
+    status: 404,
+    headers: { 'Content-Type': 'text/plain' }
+  });
+}
+
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Cookie',
+    'Access-Control-Allow-Credentials': 'true'
+  };
+}
+
+// ============================================
+// Парсинг URL с параметрами
+// ============================================
+
+function parsePath(pathname) {
+  const parts = pathname.split('/').filter(Boolean);
+  return parts;
+}
+
+// ============================================
+// ОБРАБОТЧИК ЗАПРОСОВ
+// ============================================
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const path = url.pathname;
-    const redirectUri = `${url.origin}/auth/github/callback`;
+    const pathname = url.pathname;
+    const method = request.method;
 
-    try {
-      // --- Auth ---
-      if (path === '/auth/github') return githubLoginRedirect(env, redirectUri);
-      if (path === '/auth/github/callback') return githubCallback(request, env, redirectUri);
-
-      // --- User ---
-      if (path === '/api/me' && request.method === 'GET') {
-        const user = await getCurrentUser(request, env);
-        if (!user) return json({ error: 'unauthorized' }, 401);
-        return json(user);
-      }
-
-      // --- Profile ---
-      if (path === '/api/profile/me' && request.method === 'GET') return handleGetMyProfile(request, env);
-      if (path === '/api/profile/update' && request.method === 'POST') return handleUpdateProfile(request, env);
-      if (path === '/api/profile/username' && request.method === 'POST') return handleChangeUsername(request, env);
-      
-      let m;
-      if ((m = path.match(/^\/api\/profile\/([\w-]+)$/)) && request.method === 'GET') {
-        return handleGetUserProfile(request, env, m[1]);
-      }
-      if ((m = path.match(/^\/api\/profile\/([\w-]+)\/followers$/)) && request.method === 'GET') {
-        return handleGetFollowers(request, env, m[1]);
-      }
-      if ((m = path.match(/^\/api\/profile\/([\w-]+)\/following$/)) && request.method === 'GET') {
-        return handleGetFollowing(request, env, m[1]);
-      }
-
-      // --- Follow ---
-      if ((m = path.match(/^\/api\/follow\/([\w-]+)$/)) && request.method === 'POST') {
-        return handleFollow(request, env, m[1]);
-      }
-      if ((m = path.match(/^\/api\/follow\/([\w-]+)\/status$/)) && request.method === 'GET') {
-        return handleGetFollowStatus(request, env, m[1]);
-      }
-
-      // --- Streams ---
-      if (path === '/api/streams' && request.method === 'GET') return handleListStreams(request, env);
-      if (path === '/api/streams' && request.method === 'POST') return handleCreateStream(request, env);
-      if ((m = path.match(/^\/api\/streams\/([\w-]+)$/)) && request.method === 'DELETE') {
-        return handleDeleteStream(request, env, m[1]);
-      }
-      if ((m = path.match(/^\/api\/streams\/([\w-]+)\/end$/)) && request.method === 'POST') {
-        return handleEndStream(request, env, m[1]);
-      }
-
-      // --- Media ---
-      if (path === '/api/upload' && request.method === 'POST') return handleUpload(request, env);
-      if (path === '/api/feed' && request.method === 'GET') return handleFeed(request, env);
-
-      if ((m = path.match(/^\/api\/media\/([\w-]+)\/content$/)) && request.method === 'GET') {
-        return handleMediaContent(request, env, m[1]);
-      }
-      if ((m = path.match(/^\/api\/media\/([\w-]+)$/)) && request.method === 'DELETE') {
-        return handleDeleteMedia(request, env, m[1]);
-      }
-      if ((m = path.match(/^\/api\/media\/([\w-]+)\/like$/)) && request.method === 'POST') {
-        return handleLike(request, env, m[1]);
-      }
-      if ((m = path.match(/^\/api\/media\/([\w-]+)\/save$/)) && request.method === 'POST') {
-        return handleSave(request, env, m[1]);
-      }
-      if ((m = path.match(/^\/api\/media\/([\w-]+)\/comments$/))) {
-        if (request.method === 'POST') return handleComment(request, env, m[1]);
-        if (request.method === 'GET') return handleListComments(request, env, m[1]);
-      }
-
-      // --- Search ---
-      if (path === '/api/search' && request.method === 'GET') return handleSearch(request, env);
-
-      // --- Chat ---
-      if (path === '/api/chats' && request.method === 'GET') return handleListChats(request, env);
-      if (path === '/api/chats/open' && request.method === 'POST') return handleOpenChat(request, env);
-      if ((m = path.match(/^\/api\/chats\/([\w-]+)\/messages$/))) {
-        if (request.method === 'POST') return handleSendMessage(request, env, m[1]);
-        if (request.method === 'GET') return handleGetMessages(request, env, m[1]);
-      }
-
-      // --- Frontend ---
-      if (path === '/' || path === '/index.html') {
-        return new Response(INDEX_HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-      }
-
-      return json({ error: 'not_found' }, 404);
-    } catch (err) {
-      return json({ error: 'internal_error', detail: String(err) }, 500);
+    // CORS preflight
+    if (method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: corsHeaders() });
     }
-  },
-};
 
-import INDEX_HTML from './index.html.js';
+    // ==========================================
+    // ГЛАВНАЯ СТРАНИЦА
+    // ==========================================
+    if (pathname === '/' || pathname === '/index.html') {
+      return new Response(INDEX_HTML, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'public, max-age=3600'
+        }
+      });
+    }
+
+    // ==========================================
+    // GITHUB OAUTH
+    // ==========================================
+    if (pathname === '/auth/github' && method === 'GET') {
+      const redirectUri = `${url.origin}/auth/github/callback`;
+      return githubLoginRedirect(env, redirectUri);
+    }
+
+    if (pathname === '/auth/github/callback' && method === 'GET') {
+      const redirectUri = `${url.origin}/auth/github/callback`;
+      return githubCallback(request, env, redirectUri);
+    }
+
+    // ==========================================
+    // API: МЕДИА
+    // ==========================================
+    if (pathname === '/api/media/upload' && method === 'POST') {
+      return handleUpload(request, env);
+    }
+
+    if (pathname === '/api/media/feed' && method === 'GET') {
+      return handleFeed(request, env);
+    }
+
+    if (pathname === '/api/search' && method === 'GET') {
+      return handleSearch(request, env);
+    }
+
+    // /api/media/:id — динамические роуты
+    const mediaParts = parsePath(pathname);
+    if (mediaParts[0] === 'api' && mediaParts[1] === 'media' && mediaParts[2]) {
+      const mediaId = mediaParts[2];
+
+      if (mediaParts[3] === 'like' && method === 'POST') {
+        return handleLike(request, env, mediaId);
+      }
+      if (mediaParts[3] === 'save' && method === 'POST') {
+        return handleSave(request, env, mediaId);
+      }
+      if (mediaParts[3] === 'comment' && method === 'POST') {
+        return handleComment(request, env, mediaId);
+      }
+      if (mediaParts[3] === 'comments' && method === 'GET') {
+        return handleListComments(request, env, mediaId);
+      }
+      if (method === 'GET' && !mediaParts[3]) {
+        return handleMediaContent(request, env, mediaId);
+      }
+      if (method === 'DELETE' && !mediaParts[3]) {
+        return handleDeleteMedia(request, env, mediaId);
+      }
+    }
+
+    // ==========================================
+    // API: ПРОФИЛЬ
+    // ==========================================
+    if (pathname === '/api/profile/me' && method === 'GET') {
+      return handleGetMyProfile(request, env);
+    }
+
+    if (pathname === '/api/profile' && method === 'PUT') {
+      return handleUpdateProfile(request, env);
+    }
+
+    if (pathname === '/api/profile/username' && method === 'PUT') {
+      return handleChangeUsername(request, env);
+    }
+
+    // /api/profile/:userId
+    const profileParts = parsePath(pathname);
+    if (profileParts[0] === 'api' && profileParts[1] === 'profile' && profileParts[2]) {
+      const userId = profileParts[2];
+
+      if (profileParts[3] === 'follow' && method === 'POST') {
+        return handleFollow(request, env, userId);
+      }
+      if (profileParts[3] === 'followers' && method === 'GET') {
+        return handleGetFollowers(request, env, userId);
+      }
+      if (profileParts[3] === 'following' && method === 'GET') {
+        return handleGetFollowing(request, env, userId);
+      }
+      if (!profileParts[3] && method === 'GET') {
+        return handleGetUserProfile(request, env, userId);
+      }
+    }
+
+    // ==========================================
+    // API: СТРИМЫ
+    // ==========================================
+    if (pathname === '/api/streams' && method === 'GET') {
+      return handleListStreams(request, env);
+    }
+
+    if (pathname === '/api/streams' && method === 'POST') {
+      return handleCreateStream(request, env);
+    }
+
+    const streamParts = parsePath(pathname);
+    if (streamParts[0] === 'api' && streamParts[1] === 'streams' && streamParts[2]) {
+      const streamId = streamParts[2];
+
+      if (streamParts[3] === 'end' && method === 'POST') {
+        return handleEndStream(request, env, streamId);
+      }
+      if (!streamParts[3] && method === 'DELETE') {
+        return handleDeleteStream(request, env, streamId);
+      }
+    }
+
+    // ==========================================
+    // API: ЧАТЫ
+    // ==========================================
+    if (pathname === '/api/chats' && method === 'GET') {
+      return handleListChats(request, env);
+    }
+
+    if (pathname === '/api/chats/open' && method === 'POST') {
+      return handleOpenChat(request, env);
+    }
+
+    const chatParts = parsePath(pathname);
+    if (chatParts[0] === 'api' && chatParts[1] === 'chats' && chatParts[2]) {
+      const chatId = chatParts[2];
+
+      if (chatParts[3] === 'messages' && method === 'POST') {
+        return handleSendMessage(request, env, chatId);
+      }
+      if (chatParts[3] === 'messages' && method === 'GET') {
+        return handleGetMessages(request, env, chatId);
+      }
+    }
+
+    // ==========================================
+    // НЕ НАЙДЕНО
+    // ==========================================
+    return notFound();
+  }
+};
