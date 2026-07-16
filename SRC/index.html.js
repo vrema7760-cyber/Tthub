@@ -913,7 +913,7 @@ body.easter-egg {
 
 <!-- СЕКЦИЯ: ЛЕНТА -->
 <section class="section active" id="section-feed">
-  <h1 class="section-title reveal"> Лента</h1>
+  <h1 class="section-title reveal"> Жуткие Истории</h1>
   <div id="feed-container">
     <div class="loader"><div class="loader-spinner"></div></div>
   </div>
@@ -979,7 +979,7 @@ body.easter-egg {
     <div class="form-group">
       <label class="form-label">Тип</label>
       <select class="form-select" id="uploadType">
-        <option value="video">🎬 Видео</option>
+        <option value="video"> Видео</option>
         <option value="photo">📷 Фото</option>
       </select>
     </div>
@@ -1022,7 +1022,7 @@ body.easter-egg {
         <option value="️">🕷️ Паук</option>
         <option value="🦇"> Летучая мышь</option>
         <option value="🧛">🧛 Вампир</option>
-        <option value="">🧟 Зомби</option>
+        <option value="🧟">🧟 Зомби</option>
         <option value="💀">💀 Череп</option>
         <option value="️">⚰️ Гроб</option>
         <option value="🕸️">🕸️ Паутина</option>
@@ -1050,7 +1050,7 @@ body.easter-egg {
 <!-- МОДАЛКА: СОЗДАНИЕ СТРИМА -->
 <div class="modal-overlay" id="streamModal">
   <div class="modal">
-    <h2 class="modal-title">📺 Начать стрим</h2>
+    <h2 class="modal-title"> Начать стрим</h2>
     <div class="form-group">
       <label class="form-label">Название</label>
       <input type="text" class="form-input" id="streamTitle" placeholder="Жуткий стрим...">
@@ -1227,7 +1227,7 @@ async function loadFeed() {
   try {
     const data = await apiGet('/api/media/feed?limit=20');
     if (!data.items || data.items.length === 0) {
-      container.innerHTML = '<div class="empty-state"><div class="empty-icon"></div><div class="empty-text">Лента пуста. Загрузите первый контент!</div></div>';
+      container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Лента пуста. Загрузите первый контент!</div></div>';
       return;
     }
     container.innerHTML = '<div class="media-grid">' + data.items.map(renderMediaCard).join('') + '</div>';
@@ -1243,7 +1243,7 @@ function renderMediaCard(item) {
   return '<div class="media-card reveal">' +
     '<div class="media-preview">' +
       (isVideo ? '<video src="' + previewUrl + '" muted loop playsinline></video>' : '<img src="' + previewUrl + '" alt="media" loading="lazy">') +
-      '<span class="media-type-badge">' + (isVideo ? '🎬' : '') + '</span>' +
+      '<span class="media-type-badge">' + (isVideo ? '🎬' : '📷') + '</span>' +
     '</div>' +
     '<div class="media-info">' +
       '<div class="media-author">' +
@@ -1317,11 +1317,11 @@ async function loadStreams() {
 function renderStreamCard(stream) {
   let embedUrl = stream.stream_url || '';
   // Автоконвертация YouTube
-  const ytMatch = embedUrl.match(/youtube\\.com\\/watch\\?v=([a-zA-Z0-9_-]+)/);
+  const ytMatch = embedUrl.match(/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/);
   if (ytMatch) embedUrl = 'https://www.youtube.com/embed/' + ytMatch[1];
-  const shortMatch = embedUrl.match(/youtu\\.be\\/([a-zA-Z0-9_-]+)/);
+  const shortMatch = embedUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
   if (shortMatch) embedUrl = 'https://www.youtube.com/embed/' + shortMatch[1];
-  const vimeoMatch = embedUrl.match(/vimeo\\.com\\/(\\d+)/);
+  const vimeoMatch = embedUrl.match(/vimeo\.com\/(\d+)/);
   if (vimeoMatch) embedUrl = 'https://player.vimeo.com/video/' + vimeoMatch[1];
 
   return '<div class="stream-card reveal">' +
@@ -1413,7 +1413,7 @@ async function renderChatWindow(chat) {
     '<div class="chat-messages" id="chatMessages"></div>' +
     '<div class="chat-input-area">' +
       '<input type="text" class="chat-input" id="chatInput" placeholder="Напишите сообщение...">' +
-      '<button class="btn btn-primary" id="sendMessageBtn">➤</button>' +
+      '<button class="btn btn-primary" id="sendMessageBtn"></button>' +
     '</div>' +
   '</div>';
 
@@ -1718,7 +1718,7 @@ function initScrollReveal() {
 }
 
 // ============================================
-# ПАССХАЛКА (5 кликов на логотип)
+// ПАСХАЛКА (5 кликов на логотип)
 // ============================================
 $('#mainLogo').addEventListener('click', () => {
   state.easterEggClicks++;
@@ -1728,12 +1728,12 @@ $('#mainLogo').addEventListener('click', () => {
     for (let i = 0; i < 30; i++) {
       createParticle(window.innerWidth / 2, window.innerHeight / 2);
     }
-    showToast('🎃 Пасхалка активирована!');
+    showToast(' Пасхалка активирована!');
   }
 });
 
 // ============================================
-# ГЛИТЧ ПРИ БЫСТРОМ СКРОЛЛЕ
+// ГЛИТЧ ПРИ БЫСТРОМ СКРОЛЛЕ
 // ============================================
 let lastScrollY = 0;
 let scrollVelocity = 0;
@@ -1751,7 +1751,7 @@ window.addEventListener('scroll', () => {
 });
 
 // ============================================
-# ИНИЦИАЛИЗАЦИЯ
+// ИНИЦИАЛИЗАЦИЯ
 // ============================================
 checkAuth();
 initScrollReveal();
