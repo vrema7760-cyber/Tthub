@@ -1,241 +1,338 @@
 import { json, requireUser } from './utils.js';
 
+// Вспомогательная функция для конвертации YouTube URL в embed
+function convertToEmbedUrl(url) {
+if (!url) return url;
+
+// YouTube watch URL
+const watchMatch = url.match(/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/);
+if (watchMatch) {
+return `https://www.youtube.com/embed/${watchMatch[1]}`;
+}
+
+// YouTube short URL
+const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+if (shortMatch) {
+return `https://www.youtube.com/embed/${shortMatch[1]}`;
+}
+
+// YouTube embed URL (уже в правильном формате)
+if (url.includes('youtube.com/embed/')) {
+return url;
+}
+
+// Vimeo
+const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+if (vimeoMatch) {
+return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+}
+
+// Twitch
+if (url.includes('twitch.tv/')) {
+const channelMatch = url.match(/twitch\.tv\/([a-zA-Z0-9_]+)/);
+if (channelMatch && !url.includes('/videos/') && !url.includes('/clip/')) {
+return `https://player.twitch.tv/?channel=${channelMatch[1]}&parent=localhost`;
+}
+}
+
+return url;
+}
+
 export async function handleGetMyProfile(request, env) {
-  const user = await requireUser(request, env);
-  if (!user) return json({ error: 'unauthorized' }, 401);
+const user = await requireUser(request, env);
+if (!user) return json({ error: 'unauthorized' }, 401);
 
-  let profile = await env.DB.prepare('SELECT * FROM user_profiles WHERE user_id = ?').bind(user.id).first();
-  if (!profile) {
-    await env.DB.prepare('INSERT INTO user_profiles (user_id, display_name, bio, updated_at) VALUES (?, ?, ?, ?)')
-      .bind(user.id, user.name || '', '', Date.now()).run();
-    profile = await env.DB.prepare('SELECT * FROM user_profiles WHERE user_id = ?').bind(user.id).first();
-  }
+let profile = await env.DB.prepare('SELECT * FROM user_profiles WHERE user_id = ?').bind(user.id).first();
+if (!profile) {
+await env.DB.prepare('INSERT INTO user_profiles (user_id, display_name, bio, updated_at) VALUES (?, ?, ?, ?)')
+.bind(user.id, user.name || '', '', Date.now()).run();
+profile = await env.DB.prepare('SELECT * FROM user_profiles WHERE user_id = ?').bind(user.id).first();
+}
 
-  const mediaCount = await env.DB.prepare('SELECT COUNT(*) as c FROM media WHERE user_id = ? AND deleted_at IS NULL').bind(user.id).first();
-  const streamsCount = await env.DB.prepare('SELECT COUNT(*) as c FROM streams WHERE user_id = ?').bind(user.id).first();
+const mediaCount = await env.DB.prepare('SELECT COUNT(*) as c FROM media WHERE user_id = ? AND deleted_at IS NULL').bind(user.id).first();
+const streamsCount = await env.DB.prepare('SELECT COUNT(*) as c FROM streams WHERE user_id = ?').bind(user.id).first();
 
-  return json({
-    user_id: user.id,
-    username: user.name,
-    display_name: profile.display_name,
-    bio: profile.bio,
-    avatar_url: profile.avatar_url || user.avatar_url,
-    media_count: mediaCount.c,
-    streams_count: streamsCount.c,
-    is_me: true,
-    created_at: user.created_at
-  });
+// Счётчики подписчиков и подписок
+const followersCount = await env.DB.prepare('SELECT COUNT(*) as c FROM follows WHERE following_id = ?').bind(user.id).first();
+const followingCount = await env.DB.prepare('SELECT COUNT(*) as c FROM follows WHERE follower_id = ?').bind(user.id).first();
+
+return json({
+user_id: user.id,
+username: user.name,
+display_name: profile.display_name,
+bio: profile.bio,
+avatar_url: profile.avatar_url || user.avatar_url,
+profile_emoji: profile.profile_emoji || '',
+bg_color: profile.bg_color || '#1a1a2e',
+bg_image_url: profile.bg_image_url,
+media_count: mediaCount.c,
+streams_count: streamsCount.c,
+followers_count: followersCount.c,
+following_count: followingCount.c,
+is_me: true,
+created_at: user.created_at
+});
 }
 
 export async function handleGetUserProfile(request, env, userId) {
-  const user = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
-  if (!user) return json({ error: 'user_not_found' }, 404);
+const user = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
+if (!user) return json({ error: 'user_not_found' }, 404);
 
-  let profile = await env.DB.prepare('SELECT * FROM user_profiles WHERE user_id = ?').bind(userId).first();
-  if (!profile) {
-    profile = { display_name: user.name, bio: '', avatar_url: user.avatar_url };
-  }
+let profile = await env.DB.prepare('SELECT * FROM user_profiles WHERE user_id = ?').bind(userId).first();
+if (!profile) {
+profile = { display_name: user.name, bio: '', avatar_url: user.avatar_url, profile_emoji: '' };
+}
 
-  const mediaCount = await env.DB.prepare('SELECT COUNT(*) as c FROM media WHERE user_id = ? AND deleted_at IS NULL').bind(userId).first();
-  const streamsCount = await env.DB.prepare('SELECT COUNT(*) as c FROM streams WHERE user_id = ?').bind(userId).first();
+const mediaCount = await env.DB.prepare('SELECT COUNT(*) as c FROM media WHERE user_id = ? AND deleted_at IS NULL').bind(userId).first();
+const streamsCount = await env.DB.prepare('SELECT COUNT(*) as c FROM streams WHERE user_id = ?').bind(userId).first();
 
-  const currentUser = await requireUser(request, env);
+// Счётчики подписчиков и подписок
+const followersCount = await env.DB.prepare('SELECT COUNT(*) as c FROM follows WHERE following_id = ?').bind(userId).first();
+const followingCount = await env.DB.prepare('SELECT COUNT(*) as c FROM follows WHERE follower_id = ?').bind(userId).first();
 
-  return json({
-    user_id: user.id,
-    username: user.name,
-    display_name: profile.display_name || user.name,
-    bio: profile.bio || '',
-    avatar_url: profile.avatar_url || user.avatar_url,
-    media_count: mediaCount.c,
-    streams_count: streamsCount.c,
-    is_me: currentUser && currentUser.id === userId,
-    created_at: user.created_at
-  });
+const currentUser = await requireUser(request, env);
+
+// Проверяем, подписан ли текущий пользователь
+let is_following = false;
+if (currentUser) {
+const followCheck = await env.DB.prepare('SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?')
+.bind(currentUser.id, userId).first();
+is_following = !!followCheck;
+}
+
+return json({
+user_id: user.id,
+username: user.name,
+display_name: profile.display_name || user.name,
+bio: profile.bio || '',
+avatar_url: profile.avatar_url || user.avatar_url,
+profile_emoji: profile.profile_emoji || '👻',
+bg_color: profile.bg_color || '#1a1a2e',
+bg_image_url: profile.bg_image_url,
+media_count: mediaCount.c,
+streams_count: streamsCount.c,
+followers_count: followersCount.c,
+following_count: followingCount.c,
+is_me: currentUser && currentUser.id === userId,
+is_following: is_following,
+created_at: user.created_at
+});
 }
 
 export async function handleUpdateProfile(request, env) {
-  const user = await requireUser(request, env);
-  if (!user) return json({ error: 'unauthorized' }, 401);
+const user = await requireUser(request, env);
+if (!user) return json({ error: 'unauthorized' }, 401);
 
-  const body = await request.json();
-  const { display_name, bio, avatar_url } = body;
+const body = await request.json();
+const { display_name, bio, avatar_url, profile_emoji, bg_color, bg_image_url } = body;
 
-  const updates = [];
-  const binds = [];
+const updates = [];
+const binds = [];
 
-  if (display_name !== undefined) {
-    if (display_name.length > 50) return json({ error: 'display_name_too_long' }, 400);
-    updates.push('display_name = ?');
-    binds.push(display_name);
-  }
-  if (bio !== undefined) {
-    if (bio.length > 500) return json({ error: 'bio_too_long' }, 400);
-    updates.push('bio = ?');
-    binds.push(bio);
-  }
-  if (avatar_url !== undefined) {
-    updates.push('avatar_url = ?');
-    binds.push(avatar_url);
-  }
+if (display_name !== undefined) {
+if (display_name.length > 50) return json({ error: 'display_name_too_long' }, 400);
+updates.push('display_name = ?');
+binds.push(display_name);
+}
 
-  if (updates.length === 0) return json({ error: 'no_changes' }, 400);
+if (bio !== undefined) {
+if (bio.length > 500) return json({ error: 'bio_too_long' }, 400);
+updates.push('bio = ?');
+binds.push(bio);
+}
 
-  updates.push('updated_at = ?');
-  binds.push(Date.now());
-  binds.push(user.id);
+if (avatar_url !== undefined) {
+updates.push('avatar_url = ?');
+binds.push(avatar_url);
+}
 
-  const existing = await env.DB.prepare('SELECT * FROM user_profiles WHERE user_id = ?').bind(user.id).first();
-  if (existing) {
-    await env.DB.prepare(`UPDATE user_profiles SET ${updates.join(', ')} WHERE user_id = ?`).bind(...binds).run();
-  } else {
-    await env.DB.prepare('INSERT INTO user_profiles (user_id, display_name, bio, avatar_url, updated_at) VALUES (?, ?, ?, ?, ?)')
-      .bind(user.id, display_name || user.name, bio || '', avatar_url || user.avatar_url, Date.now()).run();
-  }
+if (profile_emoji !== undefined) {
+const allowedEmojis = ['👻', '', '🕷️', '', '🧛', '', '💀', '⚰️', '🕸️', ''];
+if (!allowedEmojis.includes(profile_emoji)) {
+return json({ error: 'invalid_emoji' }, 400);
+}
+updates.push('profile_emoji = ?');
+binds.push(profile_emoji);
+}
 
-  return json({ ok: true });
+if (bg_color !== undefined) {
+if (bg_color && !/^#[0-9A-Fa-f]{6}$/.test(bg_color)) {
+return json({ error: 'invalid_color_format' }, 400);
+}
+updates.push('bg_color = ?');
+binds.push(bg_color || '#1a1a2e');
+}
+
+if (bg_image_url !== undefined) {
+updates.push('bg_image_url = ?');
+binds.push(bg_image_url);
+}
+
+if (updates.length === 0) return json({ error: 'no_changes' }, 400);
+
+updates.push('updated_at = ?');
+binds.push(Date.now());
+binds.push(user.id);
+
+const existing = await env.DB.prepare('SELECT * FROM user_profiles WHERE user_id = ?').bind(user.id).first();
+if (existing) {
+await env.DB.prepare(`UPDATE user_profiles SET ${updates.join(', ')} WHERE user_id = ?`).bind(...binds).run();
+} else {
+await env.DB.prepare(
+'INSERT INTO user_profiles (user_id, display_name, bio, avatar_url, profile_emoji, bg_color, bg_image_url, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+).bind(user.id, display_name || user.name, bio || '', avatar_url || user.avatar_url, profile_emoji || '👻', bg_color || '#1a1a2e', bg_image_url || '', Date.now()).run();
+}
+
+return json({ ok: true });
 }
 
 export async function handleChangeUsername(request, env) {
-  const user = await requireUser(request, env);
-  if (!user) return json({ error: 'unauthorized' }, 401);
+const user = await requireUser(request, env);
+if (!user) return json({ error: 'unauthorized' }, 401);
 
-  const body = await request.json();
-  const { username } = body;
+const body = await request.json();
+const { username } = body;
 
-  if (!username || username.length < 3 || username.length > 30) {
-    return json({ error: 'username_must_be_3_30_chars' }, 400);
-  }
+if (!username || username.length < 3 || username.length > 30) {
+return json({ error: 'username_must_be_3_30_chars' }, 400);
+}
 
-  if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-    return json({ error: 'username_invalid_chars' }, 400);
-  }
+if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+return json({ error: 'username_invalid_chars' }, 400);
+}
 
-  const existing = await env.DB.prepare('SELECT id FROM users WHERE name = ? AND id != ?').bind(username, user.id).first();
-  if (existing) return json({ error: 'username_taken' }, 400);
+const existing = await env.DB.prepare('SELECT id FROM users WHERE name = ? AND id != ?').bind(username, user.id).first();
+if (existing) return json({ error: 'username_taken' }, 400);
 
-  await env.DB.prepare('UPDATE users SET name = ? WHERE id = ?').bind(username, user.id).run();
-
-  return json({ ok: true, new_username: username });
+await env.DB.prepare('UPDATE users SET name = ? WHERE id = ?').bind(username, user.id).run();
+return json({ ok: true, new_username: username });
 }
 
 export async function handleListStreams(request, env) {
-  const url = new URL(request.url);
-  const cursor = Number(url.searchParams.get('cursor') || Date.now());
-  const limit = Math.min(Number(url.searchParams.get('limit') || 10), 30);
-  const onlyLive = url.searchParams.get('live') === '1';
+const url = new URL(request.url);
+const cursor = Number(url.searchParams.get('cursor') || Date.now());
+const limit = Math.min(Number(url.searchParams.get('limit') || 10), 30);
+const onlyLive = url.searchParams.get('live') === '1';
 
-  let query = `SELECT s.*, u.name as author_name, u.avatar_url as author_avatar, 
-               COALESCE(p.display_name, u.name) as author_display_name
-               FROM streams s 
-               JOIN users u ON u.id = s.user_id
-               LEFT JOIN user_profiles p ON p.user_id = s.user_id
-               WHERE s.created_at < ?`;
-  const binds = [cursor];
+let query = `SELECT s.*, u.name as author_name, u.avatar_url as author_avatar, COALESCE(p.display_name, u.name) as author_display_name FROM streams s JOIN users u ON u.id = s.user_id LEFT JOIN user_profiles p ON p.user_id = s.user_id WHERE s.created_at < ?`;
+const binds = [cursor];
 
-  if (onlyLive) {
-    query += ' AND s.is_live = 1';
-  }
+if (onlyLive) {
+query += ' AND s.is_live = 1';
+}
 
-  query += ' ORDER BY s.is_live DESC, s.created_at DESC LIMIT ?';
-  binds.push(limit);
+query += ' ORDER BY s.is_live DESC, s.created_at DESC LIMIT ?';
+binds.push(limit);
 
-  const { results } = await env.DB.prepare(query).bind(...binds).all();
+const { results } = await env.DB.prepare(query).bind(...binds).all();
 
-  return json({
-    items: results,
-    next_cursor: results.length ? results[results.length - 1].created_at : null
-  });
+return json({
+items: results,
+next_cursor: results.length ? results[results.length - 1].created_at : null
+});
 }
 
 export async function handleCreateStream(request, env) {
-  const user = await requireUser(request, env);
-  if (!user) return json({ error: 'unauthorized' }, 401);
+const user = await requireUser(request, env);
+if (!user) return json({ error: 'unauthorized' }, 401);
 
-  const body = await request.json();
-  const { title, description, stream_url, thumbnail_url } = body;
+const body = await request.json();
+const { title, description, stream_url, thumbnail_url } = body;
 
-  if (!title || title.length > 100) return json({ error: 'title_required' }, 400);
-  if (!stream_url) return json({ error: 'stream_url_required' }, 400);
+if (!title || title.length > 100) return json({ error: 'title_required' }, 400);
+if (!stream_url) return json({ error: 'stream_url_required' }, 400);
 
-  const id = crypto.randomUUID();
-  await env.DB.prepare(
-    'INSERT INTO streams (id, user_id, title, description, stream_url, thumbnail_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).bind(id, user.id, title, description || '', stream_url, thumbnail_url || '', Date.now()).run();
+// Конвертируем URL в embed формат
+const embedUrl = convertToEmbedUrl(stream_url);
 
-  return json({ ok: true, stream_id: id });
+const id = crypto.randomUUID();
+await env.DB.prepare(
+'INSERT INTO streams (id, user_id, title, description, stream_url, thumbnail_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+).bind(id, user.id, title, description || '', embedUrl, thumbnail_url || '', Date.now()).run();
+
+return json({ ok: true, stream_id: id });
 }
 
 export async function handleDeleteStream(request, env, streamId) {
-  const user = await requireUser(request, env);
-  if (!user) return json({ error: 'unauthorized' }, 401);
+const user = await requireUser(request, env);
+if (!user) return json({ error: 'unauthorized' }, 401);
 
-  const stream = await env.DB.prepare('SELECT * FROM streams WHERE id = ?').bind(streamId).first();
-  if (!stream) return json({ error: 'not_found' }, 404);
+const stream = await env.DB.prepare('SELECT * FROM streams WHERE id = ?').bind(streamId).first();
+if (!stream) return json({ error: 'not_found' }, 404);
 
-  const isAdmin = user.name === 'vrema7760-cyber';
-  if (stream.user_id !== user.id && !isAdmin) {
-    return json({ error: 'forbidden' }, 403);
-  }
+const isAdmin = user.name === 'vrema7760-cyber';
+if (stream.user_id !== user.id && !isAdmin) {
+return json({ error: 'forbidden' }, 403);
+}
 
-  await env.DB.prepare('DELETE FROM streams WHERE id = ?').bind(streamId).run();
-  return json({ ok: true });
+await env.DB.prepare('DELETE FROM streams WHERE id = ?').bind(streamId).run();
+return json({ ok: true });
 }
 
 export async function handleEndStream(request, env, streamId) {
-  const user = await requireUser(request, env);
-  if (!user) return json({ error: 'unauthorized' }, 401);
+const user = await requireUser(request, env);
+if (!user) return json({ error: 'unauthorized' }, 401);
 
-  const stream = await env.DB.prepare('SELECT * FROM streams WHERE id = ?').bind(streamId).first();
-  if (!stream) return json({ error: 'not_found' }, 404);
-  if (stream.user_id !== user.id) return json({ error: 'forbidden' }, 403);
+const stream = await env.DB.prepare('SELECT * FROM streams WHERE id = ?').bind(streamId).first();
+if (!stream) return json({ error: 'not_found' }, 404);
 
-  await env.DB.prepare('UPDATE streams SET is_live = 0 WHERE id = ?').bind(streamId).run();
-  return json({ ok: true });
-               }
-export async function handleFollow(request, env, targetUserId) {
-  const user = await requireUser(request, env);
-  if (!user) return json({ error: 'unauthorized' }, 401);
-  if (user.id === targetUserId) return json({ error: 'cannot_follow_self' }, 400);
+if (stream.user_id !== user.id) return json({ error: 'forbidden' }, 403);
 
-  const target = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(targetUserId).first();
-  if (!target) return json({ error: 'user_not_found' }, 404);
-
-  const existing = await env.DB.prepare('SELECT * FROM follows WHERE follower_id = ? AND following_id = ?').bind(user.id, targetUserId).first();
-  if (existing) {
-    await env.DB.prepare('DELETE FROM follows WHERE follower_id = ? AND following_id = ?').bind(user.id, targetUserId).run();
-    return json({ ok: true, following: false });
-  }
-
-  await env.DB.prepare('INSERT INTO follows (follower_id, following_id, created_at) VALUES (?, ?, ?)').bind(user.id, targetUserId, Date.now()).run();
-  return json({ ok: true, following: true });
+await env.DB.prepare('UPDATE streams SET is_live = 0 WHERE id = ?').bind(streamId).run();
+return json({ ok: true });
 }
 
-export async function handleGetFollowStatus(request, env, targetUserId) {
-  const user = await requireUser(request, env);
-  if (!user) return json({ error: 'unauthorized' }, 401);
+// НОВЫЕ ФУНКЦИИ ДЛЯ ПОДПИСОК
 
-  const follow = await env.DB.prepare('SELECT * FROM follows WHERE follower_id = ? AND following_id = ?').bind(user.id, targetUserId).first();
-  const followersCount = await env.DB.prepare('SELECT COUNT(*) as c FROM follows WHERE following_id = ?').bind(targetUserId).first();
-  const followingCount = await env.DB.prepare('SELECT COUNT(*) as c FROM follows WHERE follower_id = ?').bind(targetUserId).first();
+export async function handleFollow(request, env, userId) {
+const currentUser = await requireUser(request, env);
+if (!currentUser) return json({ error: 'unauthorized' }, 401);
 
-  return json({
-    following: !!follow,
-    followers_count: followersCount.c,
-    following_count: followingCount.c
-  });
+if (currentUser.id === userId) {
+return json({ error: 'cannot_follow_self' }, 400);
+}
+
+// Проверяем существование пользователя
+const targetUser = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first();
+if (!targetUser) return json({ error: 'user_not_found' }, 404);
+
+// Проверяем, не подписан ли уже
+const existing = await env.DB.prepare('SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?')
+.bind(currentUser.id, userId).first();
+
+if (existing) {
+// Отписка
+await env.DB.prepare('DELETE FROM follows WHERE follower_id = ? AND following_id = ?')
+.bind(currentUser.id, userId).run();
+return json({ following: false });
+} else {
+// Подписка
+await env.DB.prepare('INSERT INTO follows (follower_id, following_id, created_at) VALUES (?, ?, ?)')
+.bind(currentUser.id, userId, Date.now()).run();
+return json({ following: true });
+}
 }
 
 export async function handleGetFollowers(request, env, userId) {
-  const { results } = await env.DB.prepare(
-    'SELECT u.id, u.name, u.avatar_url, p.display_name, p.profile_emoji FROM follows f JOIN users u ON u.id = f.follower_id LEFT JOIN user_profiles p ON p.user_id = f.follower_id WHERE f.following_id = ? ORDER BY f.created_at DESC'
-  ).bind(userId).all();
-  return json({ items: results });
+const { results } = await env.DB.prepare(
+`SELECT u.*, p.display_name, p.profile_emoji FROM follows f 
+JOIN users u ON u.id = f.follower_id 
+LEFT JOIN user_profiles p ON p.user_id = f.follower_id
+WHERE f.following_id = ? 
+ORDER BY f.created_at DESC LIMIT 100`
+).bind(userId).all();
+
+return json({ items: results });
 }
 
 export async function handleGetFollowing(request, env, userId) {
-  const { results } = await env.DB.prepare(
-    'SELECT u.id, u.name, u.avatar_url, p.display_name, p.profile_emoji FROM follows f JOIN users u ON u.id = f.following_id LEFT JOIN user_profiles p ON p.user_id = f.following_id WHERE f.follower_id = ? ORDER BY f.created_at DESC'
-  ).bind(userId).all();
-  return json({ items: results });
+const { results } = await env.DB.prepare(
+`SELECT u.*, p.display_name, p.profile_emoji FROM follows f 
+JOIN users u ON u.id = f.following_id 
+LEFT JOIN user_profiles p ON p.user_id = f.following_id
+WHERE f.follower_id = ? 
+ORDER BY f.created_at DESC LIMIT 100`
+).bind(userId).all();
+
+return json({ items: results });
 }
