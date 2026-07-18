@@ -198,3 +198,18 @@ VALUES ('shard-1', 'SHARD_1', 5000000000, 0, 1);
 SELECT name FROM sqlite_master 
 WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name != '_cf_KV'
 ORDER BY name;
+-- Таблица стримов
+CREATE TABLE IF NOT EXISTS streams (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  type TEXT CHECK(type IN ('screen', 'camera')) NOT NULL,
+  title TEXT NOT NULL,
+  is_live INTEGER DEFAULT 1,
+  viewers INTEGER DEFAULT 0,
+  started_at INTEGER NOT NULL,
+  ended_at INTEGER,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_streams_live ON streams(is_live, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_streams_user ON streams(user_id);
