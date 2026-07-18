@@ -1,44 +1,72 @@
-export function json(obj, status = 200, extraHeaders = {}) {
-  return new Response(JSON.stringify(obj), {
+// SRC/utils.js
+
+export const json = (data, status = 200, headers = {}) => {
+  return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json', ...extraHeaders },
+    headers: { 'Content-Type': 'application/json', ...headers }
   });
-}
+};
 
-export function uuid() {
-  return crypto.randomUUID();
-}
-
-export function getCookie(request, name) {
-  const cookie = request.headers.get('Cookie') || '';
-  const match = cookie.match(new RegExp(`${name}=([^;]+)`));
-  return match ? match[1] : null;
-}
-
-// ✅ КРИТИЧНЫЙ ФИКС: Secure ставится ТОЛЬКО на HTTPS
-// Иначе на http://localhost:8787 браузер откажется сохранять cookie
-export function setSessionCookie(token, request) {
-  const url = new URL(request.url);
-  const isSecure = url.protocol === 'https:' 
-    || url.hostname === 'localhost' 
-    || url.hostname === '127.0.0.1';
-  
-  const parts = [
-    `session=${token}`,
-    'HttpOnly',
-    'SameSite=Lax',
-    'Path=/',
-    'Max-Age=2592000',
-  ];
-  if (isSecure) parts.push('Secure');
-  return parts.join('; ');
-}
-
-export async function requireUser(request, env) {
-  const token = getCookie(request, 'session');
+export const requireUser = async (request, env) => {
+  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
   if (!token) return null;
-  const row = await env.DB.prepare(
-    'SELECT users.* FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token = ? AND sessions.expires_at > ?'
+  
+  // Очистка просроченных сессий
+  await env.DB.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(Date.now()).run();
+  
+  const session = await env.DB.prepare(
+    'SELECT user_id FROM sessions WHERE token = ? AND expires_at > ?'
   ).bind(token, Date.now()).first();
-  return row || null;
-}
+  
+  if (!session) return null;
+  
+  return await env.DB.prepare(
+    'SELECT id, name, avatar_url FROM users WHERE id = ?'
+  ).bind(session.user_id).first();
+};
+
+// === БЕЗОПАСНОЕ ХЕШИРОВАНИЕ ПАРОЛЕЙ (Web Crypto API) ===
+export const hashPassword = async (password) => {
+  const encoder = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']
+  );
+  const hash = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100000 },
+    keyMaterial, 256
+  );
+  const hashArray = Array.from(new Uint8Array(hash));
+  const saltArray = Array.from(salt);
+  return saltArray.map(b => b.toString(16).padStart(2, '0')).join('') + ':' + 
+         hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+export const verifyPassword = async (password, storedHash) => {
+  const [saltHex, hashHex] = storedHash.split(':');
+  const salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+  const encoder = new TextEncoder();
+  
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']
+  );
+  const hash = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100000 },
+    keyMaterial, 256
+  );
+  const hashArray = Array.from(new Uint8Array(hash));
+  const computedHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  return computedHex === hashHex;
+};
+
+// === CORS HEADERS ===
+export const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export const handleOptions = () => {
+  return new Response(null, { status: 204, headers: corsHeaders });
+};
