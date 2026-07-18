@@ -2583,6 +2583,91 @@ if (window.location.hash && window.location.hash.startsWith('#')) {
 
 console.log('%c🎃 SpookyTok', 'font-size: 32px; font-weight: bold; background: linear-gradient(135deg, #8b5cf6, #f97316); color: white; padding: 10px 20px; border-radius: 10px;');
 console.log('%cЖуткие истории в TikTok-стиле', 'font-size: 14px; color: #a0a0c0;');
+<script>
+// === ОБРАБОТЧИКИ КНОПОК ===
+document.addEventListener('DOMContentLoaded', () => {
+  // Кнопка загрузки
+  const uploadBtn = document.getElementById('uploadBtn');
+  if (uploadBtn) {
+    uploadBtn.addEventListener('click', async () => {
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'video/*,image/*';
+      fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Конвертация в base64
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+          const base64 = ev.target.result.split(',')[1];
+          const type = file.type.startsWith('video') ? 'video' : 'photo';
+          
+          try {
+            const res = await fetch('/api/media/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ type, mime: file.type, base64, caption: '' })
+            });
+            const data = await res.json();
+            if (data.ok) {
+              alert('✅ Загружено!');
+              location.reload(); // Обновить ленту
+            } else {
+              alert('❌ Ошибка: ' + data.error);
+            }
+          } catch (err) {
+            alert('❌ Сетевая ошибка');
+          }
+        };
+        reader.readAsDataURL(file);
+      };
+      fileInput.click();
+    });
+  }
+
+  // Кнопки лайка/сохранения
+  document.querySelectorAll('.like-btn, .save-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const mediaId = btn.dataset.mediaId;
+      const action = btn.classList.contains('like-btn') ? 'like' : 'save';
+      
+      try {
+        const res = await fetch(`/api/media/${mediaId}/${action}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          btn.classList.toggle('active');
+          const counter = btn.querySelector('.count');
+          if (counter) counter.textContent = parseInt(counter.textContent) + (btn.classList.contains('active') ? 1 : -1);
+        }
+      } catch {}
+    });
+  });
+
+  // Загрузка ленты
+  async function loadFeed(cursor = null) {
+    const url = cursor ? `/api/media/feed?cursor=${cursor}` : '/api/media/feed';
+    const res = await fetch(url);
+    const data = await res.json();
+    const container = document.getElementById('feed-container');
+    if (!container) return;
+    
+    data.items.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'media-card';
+      card.innerHTML = `
+        <video src="/api/media/${item.id}" ${item.type === 'photo' ? 'style="display:none"' : ''} controls></video>
+        <img src="/api/media/${item.id}" ${item.type === 'video' ? 'style="display:none"' : ''} alt="">
+        <p>${item.caption || ''}</p>
+        <button class="like-btn" data-media-id="${item.id}">❤️ <span class="count">0</span></button>
+        <button class="save-btn" data-media-id="${item.id}">🔖</button>
+      `;
+      container.appendChild(card);
+    });
+  }
+  loadFeed();
+});
 </script>
 </body>
 </html>`;
