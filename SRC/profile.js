@@ -173,3 +173,64 @@ export async function handleGetFollowing(request, env, userId) {
   const { results } = await env.DB.prepare('SELECT u.*, p.display_name, p.profile_emoji FROM follows f JOIN users u ON u.id = f.following_id LEFT JOIN user_profiles p ON p.user_id = f.following_id WHERE f.follower_id = ? ORDER BY f.created_at DESC LIMIT 100').bind(userId).all();
   return json({ items: results });
     }
+// === НОВЫЕ ФУНКЦИИ ДЛЯ СТРИМОВ ===
+
+export async function handleListStreams(request, env) {
+  const { results } = await env.DB.prepare(
+    `SELECT s.*, u.name as author_name, u.avatar_url 
+     FROM streams s 
+     JOIN users u ON u.id = s.user_id 
+     WHERE s.is_live = 1 AND s.ended_at IS NULL 
+     ORDER BY s.started_at DESC LIMIT 20`
+  ).all();
+  return json({ items: results });
+}
+
+export async function handleCreateStream(request, env) {
+  const user = await requireUser(request, env);
+  if (!user) return json({ error: 'unauthorized' }, 401);
+  
+  const { type, title, is_live = true } = await request.json();
+  if (!['screen', 'camera'].includes(type)) {
+    return json({ error: 'invalid_stream_type' }, 400);
+  }
+  
+  const streamId = crypto.randomUUID();
+  await env.DB.prepare(
+    `INSERT INTO streams (id, user_id, type, title, is_live, started_at) 
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).bind(streamId, user.id, type, title || 'Без названия', is_live, Date.now()).run();
+  
+  return json({ ok: true, stream_id: streamId });
+}
+
+export async function handleEndStream(request, env, streamId) {
+  const user = await requireUser(request, env);
+  if (!user) return json({ error: 'unauthorized' }, 401);
+  
+  const stream = await env.DB.prepare(
+    'SELECT * FROM streams WHERE id = ?'
+  ).bind(streamId).first();
+  
+  if (!stream) return json({ error: 'not_found' }, 404);
+  if (stream.user_id !== user.id && user.name !== 'Negr') {
+    return json({ error: 'forbidden' }, 403);
+  }
+  
+  await env.DB.prepare(
+    'UPDATE streams SET is_live = 0, ended_at = ? WHERE id = ?'
+  ).bind(Date.now(), streamId).run();
+  
+  return json({ ok: true, ended: true });
+}
+
+export async function handleDeleteStream(request, env, streamId) {
+  // Аналогично handleEndStream, но с удалением записи
+  const user = await requireUser(request, env);
+  if (!user) return json({ error: 'unauthorized' }, 401);
+  
+  await env.DB.prepare('DELETE FROM streams WHERE id = ? AND user_id = ?')
+    .bind(streamId, user.id).run();
+    
+  return json({ ok: true, deleted: true });
+}
