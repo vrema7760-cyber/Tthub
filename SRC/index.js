@@ -1,169 +1,97 @@
-import { json } from './utils.js';
-import { githubLoginRedirect, githubCallback } from './auth.js';
-import {
-  handleGetMyProfile,
-  handleGetUserProfile,
-  handleUpdateProfile,
-  handleChangeUsername,
-  handleListStreams,
-  handleCreateStream,
-  handleDeleteStream,
-  handleEndStream,
-  handleFollow,
-  handleGetFollowers,
-  handleGetFollowing
+// SRC/index.js
+import { handleUpload, handleFeed, handleMediaContent, handleDeleteMedia } from './media.js';
+import { 
+  handleGetProfile, handleUpdateProfile, handleRegister, handleLogin, handleLogout,
+  handleListStreams, handleCreateStream, handleEndStream, handleDeleteStream, handleGetStream,
+  handleLike, handleSave, handleGetSaved 
 } from './profile.js';
-import {
-  handleUpload,
-  handleFeed,
-  handleMediaContent,
-  handleDeleteMedia,
-  handleSaved
-} from './media.js';
-import {
-  handleListChats,
-  handleOpenChat,
-  handleSendMessage,
-  handleGetMessages
-} from './chat.js';
-import {
-  handleLike,
-  handleSave,
-  handleComment,
-  handleListComments
-} from './social.js';
-import { handleSearch } from './search.js';
+import { json, corsHeaders, handleOptions } from './utils.js';
 import INDEX_HTML from './index.html.js';
-
-function corsHeaders(request) {
-  const origin = request.headers.get('Origin');
-  return {
-    'Access-Control-Allow-Origin': origin || '*',
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Cookie, Authorization',
-    'Vary': 'Origin',
-  };
-}
-
-function withCors(request, response) {
-  const headers = new Headers(response.headers);
-  for (const [key, value] of Object.entries(corsHeaders(request))) {
-    headers.set(key, value);
-  }
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
-}
-
-async function safeHandler(request, handler) {
-  try {
-    const response = await handler();
-    return withCors(request, response);
-  } catch (err) {
-    console.error('Handler error:', err);
-    return withCors(request, json({ error: err.message || 'internal_server_error' }, 500));
-  }
-}
-
-function notFound(request) {
-  return withCors(request, new Response('404 Not Found', {
-    status: 404,
-    headers: { 'Content-Type': 'text/plain' }
-  }));
-}
-
-function parsePath(pathname) {
-  return pathname.split('/').filter(Boolean);
-}
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const pathname = url.pathname;
+    const path = url.pathname;
     const method = request.method;
-    const wrap = (handler) => safeHandler(request, handler);
 
-    if (method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders(request) });
-    }
+    // CORS preflight
+    if (method === 'OPTIONS') return handleOptions();
 
-    if (pathname === '/' || pathname === '/index.html') {
-      return withCors(request, new Response(INDEX_HTML, {
-        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }
-      }));
-    }
-
-    if (pathname === '/auth/github' && method === 'GET') {
-      return githubLoginRedirect(env, `${url.origin}/auth/github/callback`);
-    }
-    if (pathname === '/auth/github/callback' && method === 'GET') {
-      return githubCallback(request, env, `${url.origin}/auth/github/callback`);
-    }
-
-    if (pathname === '/api/media/upload' && method === 'POST') return wrap(() => handleUpload(request, env));
-    if (pathname === '/api/media/feed' && method === 'GET') return wrap(() => handleFeed(request, env));
-    if (pathname === '/api/media/saved' && method === 'GET') return wrap(() => handleSaved(request, env));
-    if (pathname === '/api/search' && method === 'GET') return wrap(() => handleSearch(request, env));
-
-    const mediaParts = parsePath(pathname);
-    if (mediaParts[0] === 'api' && mediaParts[1] === 'media' && mediaParts[2]) {
-      const mediaId = mediaParts[2];
-      if (mediaParts[3] === 'like' && method === 'POST') return wrap(() => handleLike(request, env, mediaId));
-      if (mediaParts[3] === 'save' && method === 'POST') return wrap(() => handleSave(request, env, mediaId));
-      if (mediaParts[3] === 'comment' && method === 'POST') return wrap(() => handleComment(request, env, mediaId));
-      if (mediaParts[3] === 'comments' && method === 'GET') return wrap(() => handleListComments(request, env, mediaId));
-      if (method === 'GET' && !mediaParts[3]) return wrap(() => handleMediaContent(request, env, mediaId));
-      if (method === 'DELETE' && !mediaParts[3]) return wrap(() => handleDeleteMedia(request, env, mediaId));
-    }
-
-    const userParts = parsePath(pathname);
-    if (userParts[0] === 'api' && userParts[1] === 'users' && userParts[2] === 'by-username' && userParts[3] && method === 'GET') {
-      return wrap(async () => {
-        const username = decodeURIComponent(userParts[3]);
-        const user = await env.DB.prepare(
-          'SELECT u.id, u.name, u.avatar_url, COALESCE(p.display_name, u.name) as display_name FROM users u LEFT JOIN user_profiles p ON p.user_id = u.id WHERE u.name = ?'
-        ).bind(username).first();
-        if (!user) return json({ error: 'user_not_found' }, 404);
-        return json(user);
+    // === HTML / FRONTEND ===
+    if (path === '/' || path === '/index.html') {
+      return new Response(INDEX_HTML, { 
+        headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders } 
       });
     }
 
-    if (pathname === '/api/profile/me' && method === 'GET') return wrap(() => handleGetMyProfile(request, env));
-    if (pathname === '/api/profile' && method === 'PUT') return wrap(() => handleUpdateProfile(request, env));
-    if (pathname === '/api/profile/username' && method === 'PUT') return wrap(() => handleChangeUsername(request, env));
-
-    const profileParts = parsePath(pathname);
-    if (profileParts[0] === 'api' && profileParts[1] === 'profile' && profileParts[2]) {
-      const userId = profileParts[2];
-      if (profileParts[3] === 'follow' && method === 'POST') return wrap(() => handleFollow(request, env, userId));
-      if (profileParts[3] === 'followers' && method === 'GET') return wrap(() => handleGetFollowers(request, env, userId));
-      if (profileParts[3] === 'following' && method === 'GET') return wrap(() => handleGetFollowing(request, env, userId));
-      if (!profileParts[3] && method === 'GET') return wrap(() => handleGetUserProfile(request, env, userId));
+    // === МЕДИА API ===
+    if (path === '/api/media/upload' && method === 'POST') 
+      return handleUpload(request, env);
+    
+    if (path === '/api/media/feed' && method === 'GET') 
+      return handleFeed(request, env);
+    
+    if (path.match(/^\/api\/media\/[^/]+\/like$/) && method === 'POST') {
+      const mediaId = path.split('/')[3];
+      return handleLike(request, env, mediaId);
+    }
+    
+    if (path.match(/^\/api\/media\/[^/]+\/save$/) && method === 'POST') {
+      const mediaId = path.split('/')[3];
+      return handleSave(request, env, mediaId);
+    }
+    
+    if (path.match(/^\/api\/media\/[^/]+$/) && method === 'GET') {
+      const mediaId = path.split('/')[3];
+      return handleMediaContent(request, env, mediaId);
+    }
+    
+    if (path.match(/^\/api\/media\/[^/]+$/) && method === 'DELETE') {
+      const mediaId = path.split('/')[3];
+      return handleDeleteMedia(request, env, mediaId);
     }
 
-    if (pathname === '/api/streams' && method === 'GET') return wrap(() => handleListStreams(request, env));
-    if (pathname === '/api/streams' && method === 'POST') return wrap(() => handleCreateStream(request, env));
-
-    const streamParts = parsePath(pathname);
-    if (streamParts[0] === 'api' && streamParts[1] === 'streams' && streamParts[2]) {
-      const streamId = streamParts[2];
-      if (streamParts[3] === 'end' && method === 'POST') return wrap(() => handleEndStream(request, env, streamId));
-      if (!streamParts[3] && method === 'DELETE') return wrap(() => handleDeleteStream(request, env, streamId));
+    // === СТРИМЫ API ===
+    if (path === '/api/streams' && method === 'GET') 
+      return handleListStreams(request, env);
+    
+    if (path === '/api/streams' && method === 'POST') 
+      return handleCreateStream(request, env);
+    
+    if (path.match(/^\/api\/streams\/[^/]+\/end$/) && method === 'POST') {
+      const streamId = path.split('/')[3];
+      return handleEndStream(request, env, streamId);
+    }
+    
+    if (path.match(/^\/api\/streams\/[^/]+$/) && !path.includes('/end')) {
+      const streamId = path.split('/')[3];
+      if (method === 'GET') return handleGetStream(request, env, streamId);
+      if (method === 'DELETE') return handleDeleteStream(request, env, streamId);
     }
 
-    if (pathname === '/api/chats' && method === 'GET') return wrap(() => handleListChats(request, env));
-    if (pathname === '/api/chats/open' && method === 'POST') return wrap(() => handleOpenChat(request, env));
-
-    const chatParts = parsePath(pathname);
-    if (chatParts[0] === 'api' && chatParts[1] === 'chats' && chatParts[2]) {
-      const chatId = chatParts[2];
-      if (chatParts[3] === 'messages' && method === 'POST') return wrap(() => handleSendMessage(request, env, chatId));
-      if (chatParts[3] === 'messages' && method === 'GET') return wrap(() => handleGetMessages(request, env, chatId));
+    // === ПРОФИЛЬ / АВТОРИЗАЦИЯ ===
+    if (path === '/api/auth/register' && method === 'POST') 
+      return handleRegister(request, env);
+    
+    if (path === '/api/auth/login' && method === 'POST') 
+      return handleLogin(request, env);
+    
+    if (path === '/api/auth/logout' && method === 'POST') 
+      return handleLogout(request, env);
+    
+    if (path === '/api/profile' && method === 'GET') {
+      const userId = url.searchParams.get('id');
+      if (!userId) return json({ error: 'missing_id' }, 400);
+      return handleGetProfile(request, env, userId);
     }
+    
+    if (path === '/api/profile' && method === 'PUT') 
+      return handleUpdateProfile(request, env);
+    
+    if (path === '/api/profile/saved' && method === 'GET') 
+      return handleGetSaved(request, env);
 
-    return notFound(request);
+    // === 404 ===
+    return json({ error: 'not_found', path }, 404);
   }
 };
