@@ -204,26 +204,6 @@ export async function handleCreateStream(request, env) {
   return json({ ok: true, stream_id: streamId });
 }
 
-export async function handleEndStream(request, env, streamId) {
-  const user = await requireUser(request, env);
-  if (!user) return json({ error: 'unauthorized' }, 401);
-  
-  const stream = await env.DB.prepare(
-    'SELECT * FROM streams WHERE id = ?'
-  ).bind(streamId).first();
-  
-  if (!stream) return json({ error: 'not_found' }, 404);
-  if (stream.user_id !== user.id && user.name !== 'Negr') {
-    return json({ error: 'forbidden' }, 403);
-  }
-  
-  await env.DB.prepare(
-    'UPDATE streams SET is_live = 0, ended_at = ? WHERE id = ?'
-  ).bind(Date.now(), streamId).run();
-  
-  return json({ ok: true, ended: true });
-}
-
 export async function handleDeleteStream(request, env, streamId) {
   // Аналогично handleEndStream, но с удалением записи
   const user = await requireUser(request, env);
