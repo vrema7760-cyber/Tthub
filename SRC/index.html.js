@@ -1718,198 +1718,24 @@ function initMediaVideoHover() {
 // ============================================
 // СТРИМЫ
 // ============================================
-function extractYouTubeId(url) {
-  if (!url) return null;
-  const m1 = url.match(/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/);
-  if (m1) return m1[1];
-  const m2 = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
-  if (m2) return m2[1];
-  const m3 = url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/);
-  if (m3) return m3[1];
-  const m4 = url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]+)/);
-  if (m4) return m4[1];
-  return null;
-}
-
-function toEmbedUrl(url) {
-  if (!url) return '';
-  const yid = extractYouTubeId(url);
-  if (yid) return 'https://www.youtube.com/embed/' + yid + '?autoplay=1&rel=0';
-
-  const vm = url.match(/vimeo\.com\/(\d+)/);
-  if (vm) return 'https://player.vimeo.com/video/' + vm[1] + '?autoplay=1';
-
-  const tw = url.match(/twitch\.tv\/([a-zA-Z0-9_]+)/);
-  if (tw && !url.includes('/videos/') && !url.includes('/clip/')) {
-    const parent = location.hostname || 'localhost';
-    return 'https://player.twitch.tv/?channel=' + tw[1] + '&parent=' + parent + '&autoplay=true';
-  }
-
-  return url;
-}
-
-function isValidStreamUrl(url) {
-  if (!url || typeof url !== 'string') return false;
-  const u = url.trim();
-  if (!u) return false;
-  if (/youtube\.com|youtu\.be/.test(u)) return true;
-  if (/twitch\.tv/.test(u)) return true;
-  if (/vimeo\.com/.test(u)) return true;
-  try {
-    new URL(u);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function loadStreams() {
-  const container = $('#streams-container');
-  container.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
-
-  try {
-    const data = await apiGet('/api/streams?limit=50');
-    const allStreams = data.items || [];
-
-    // Фильтруем валидные/невалидные
-    const validStreams = allStreams.filter(s => isValidStreamUrl(s.stream_url));
-    const invalidStreams = allStreams.filter(s => !isValidStreamUrl(s.stream_url));
-
-    // Автоудаление битых стримов для админа
-    if (isAdmin() && invalidStreams.length > 0) {
-      console.log('🗑️ Удаляю ' + invalidStreams.length + ' нерабочих стримов...');
-      for (const bad of invalidStreams) {
-        try {
-          await apiDelete('/api/streams/' + bad.id);
-        } catch (e) {
-          console.warn('Не удалось удалить стрим ' + bad.id, e);
-        }
-      }
-      showToast('🧹 Удалено нерабочих стримов: ' + invalidStreams.length, 'success');
-    }
-
-    // Только LIVE стримы
-    const liveStreams = validStreams.filter(s => s.is_live === 1 || s.is_live === true);
-    const count = liveStreams.length;
-
-    $('#liveCount').textContent = count + (count === 1 ? ' стрим' : ' стримов');
-
-    if (count === 0) {
-      container.innerHTML = '<div class="empty-state"><div class="empty-icon">📺</div><div class="empty-text">Нет активных стримов. Начните свой!</div></div>';
-      return;
-    }
-
-    container.innerHTML = '<div class="streams-scroll">' + liveStreams.map(renderStreamCard).join('') + '</div>';
-
-    // Обработчики кликов на превью
-    container.querySelectorAll('.stream-thumb, .stream-placeholder').forEach(el => {
-      el.addEventListener('click', () => {
-        const preview = el.closest('.stream-preview');
-        const embedUrl = preview.dataset.embed;
-        if (!embedUrl) {
-          showToast('Некорректный URL стрима', 'error');
-          return;
-        }
-        preview.innerHTML = '<iframe src="' + escapeHtml(embedUrl) + '" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; accelerometer; gyroscope; clipboard-write" style="width:100%;height:100%;border:none;"></iframe>';
-      });
-    });
-
-    // Обработчики кнопок "Удалить"
-    container.querySelectorAll('.stream-delete-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        if (!confirm('Удалить этот стрим?')) return;
-        try {
-          await apiDelete('/api/streams/' + btn.dataset.streamId);
-          showToast('Стрим удалён');
-          btn.closest('.stream-card').remove();
-          const newCount = container.querySelectorAll('.stream-card').length;
-          $('#liveCount').textContent = newCount + ' стримов';
-        } catch (e) {
-          showToast('Ошибка: ' + e.message, 'error');
-        }
-      });
-    });
-  } catch (e) {
-    container.innerHTML = '<div class="empty-state"><div class="empty-text">Ошибка: ' + escapeHtml(e.message) + '</div></div>';
-  }
-}
-
-function renderStreamCard(stream) {
-  const url = stream.stream_url || '';
-  const customThumb = stream.thumbnail_url || '';
-  const youtubeId = extractYouTubeId(url);
-  const embedUrl = toEmbedUrl(url);
-  const authorName = stream.author_display_name || stream.author_name || 'Стример';
-  const isOwner = state.user && state.user.user_id === stream.user_id;
-  const canDelete = isOwner || isAdmin();
-
-  // Автопревью для YouTube или пустое
-  const autoThumb = (!customThumb && youtubeId)
-    ? 'https://img.youtube.com/vi/' + youtubeId + '/hqdefault.jpg'
-    : '';
-  const finalThumb = customThumb || autoThumb;
-
-  let previewHtml = '';
-  if (finalThumb) {
-    // Есть превью — показываем картинку с кнопкой play
-    previewHtml = '<div class="stream-thumb" style="background-image:url(\'' + escapeHtml(finalThumb) + '\');">' +
-      '<div class="stream-thumb-play">▶</div>' +
-      '<div class="stream-live-badge">🔴 LIVE</div>' +
-    '</div>';
-  } else {
-    // Нет превью — показываем смайлик 📺
-    previewHtml = '<div class="stream-placeholder" title="Нажмите чтобы открыть стрим">' +
-      '<div class="stream-placeholder-content">' +
-        '<div class="stream-placeholder-emoji">📺</div>' +
-        '<div class="stream-placeholder-text">Нажмите чтобы смотреть</div>' +
-      '</div>' +
-      '<div class="stream-live-badge">🔴 LIVE</div>' +
-    '</div>';
-  }
-
-  const deleteBtn = canDelete
-    ? '<button class="stream-delete-btn" data-stream-id="' + escapeHtml(stream.id) + '" title="Удалить стрим">🗑️ Удалить</button>'
-    : '';
-
-  return '<div class="stream-card reveal">' +
-    '<div class="stream-preview" data-embed="' + escapeHtml(embedUrl) + '">' +
-      previewHtml +
-      deleteBtn +
-    '</div>' +
-    '<div class="stream-info">' +
-      '<div class="stream-title">' + escapeHtml(stream.title || 'Без названия') + '</div>' +
-      '<div class="stream-author">' + escapeHtml(authorName) + '</div>' +
-    '</div>' +
-  '</div>';
-}
-
-$('#startStreamBtn').addEventListener('click', () => {
-  if (!state.user) { showToast('Нужно войти', 'error'); return; }
-  openModal('streamModal');
-});
-
-$('#confirmStream').addEventListener('click', async () => {
-  const title = $('#streamTitle').value.trim();
-  const description = $('#streamDescription').value.trim();
-  const streamUrl = $('#streamUrl').value.trim();
-  const thumbnail = $('#streamThumbnail').value.trim();
-
-  if (!title || !streamUrl) { showToast('Заполните название и URL', 'error'); return; }
-
-  try {
-    await apiPost('/api/streams', { title, description, stream_url: streamUrl, thumbnail_url: thumbnail });
-    showToast('Стрим создан!');
-    closeModal('streamModal');
-    $('#streamTitle').value = '';
-    $('#streamDescription').value = '';
-    $('#streamUrl').value = '';
-    $('#streamThumbnail').value = '';
-    loadStreams();
-  } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
-});
-
-$('#cancelStream').addEventListener('click', () => closeModal('streamModal'));
+<section id="streams-section" class="section">
+  <h2 class="section-title">📺 Прямые эфиры</h2>
+  <div class="stream-controls">
+    <button id="startScreenStream" class="btn btn-primary">🖥️ Стрим экрана</button>
+    <button id="startCameraStream" class="btn btn-primary">📹 Стрим камеры</button>
+    <button id="stopStream" class="btn btn-danger hidden">⏹️ Остановить</button>
+  </div>
+  <div id="stream-preview" class="stream-preview hidden">
+    <video id="localVideo" autoplay muted playsinline class="w-full rounded-lg"></video>
+    <div class="stream-info">
+      <span id="streamStatus">🔴 LIVE</span>
+      <span id="viewerCount">👁️ 0</span>
+    </div>
+  </div>
+  <div id="activeStreams" class="stream-grid">
+    <!-- Сюда добавляются карточки активных стримов -->
+  </div>
+</section>
 
 // ============================================
 // ЧАТЫ
