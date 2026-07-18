@@ -1974,7 +1974,110 @@ async function sendMessage() {
     await loadMessages();
   } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
 }
+let localStream = null;
+let peerConnection = null;
+let currentStreamId = null;
 
+// Запуск стрима экрана
+document.getElementById('startScreenStream')?.addEventListener('click', async () => {
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({ 
+      video: { cursor: "always" }, 
+      audio: true 
+    });
+    startLocalStream(stream, 'screen');
+  } catch (err) {
+    alert('❌ Не удалось захватить экран: ' + err.message);
+  }
+});
+
+// Запуск стрима камеры
+document.getElementById('startCameraStream')?.addEventListener('click', async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      video: { width: 1280, height: 720 }, 
+      audio: true 
+    });
+    startLocalStream(stream, 'camera');
+  } catch (err) {
+    alert('❌ Не удалось получить доступ к камере: ' + err.message);
+  }
+});
+
+async function startLocalStream(stream, type) {
+  localStream = stream;
+  document.getElementById('localVideo').srcObject = stream;
+  document.getElementById('stream-preview').classList.remove('hidden');
+  document.getElementById('stopStream').classList.remove('hidden');
+  document.querySelectorAll('.stream-controls button').forEach(btn => {
+    if (btn.id !== 'stopStream') btn.classList.add('hidden');
+  });
+  
+  // Создаём запись стрима в БД
+  try {
+    const res = await fetch('/api/streams', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        type, 
+        title: `${type === 'screen' ? '🖥️' : '📹'} Прямой эфир`,
+        is_live: true 
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      currentStreamId = data.stream_id;
+      // Здесь можно добавить WebRTC signaling через /api/streams/{id}/signal
+    }
+  } catch (err) {
+    console.error('Ошибка создания стрима:', err);
+  }
+}
+
+// Остановка стрима
+document.getElementById('stopStream')?.addEventListener('click', async () => {
+  if (localStream) {
+    localStream.getTracks().forEach(track => track.stop());
+    localStream = null;
+  }
+  
+  if (currentStreamId) {
+    await fetch(`/api/streams/${currentStreamId}/end`, { method: 'POST' });
+    currentStreamId = null;
+  }
+  
+  document.getElementById('stream-preview').classList.add('hidden');
+  document.getElementById('stopStream').classList.add('hidden');
+  document.querySelectorAll('.stream-controls button').forEach(btn => {
+    if (btn.id !== 'startScreenStream' && btn.id !== 'startCameraStream') return;
+    btn.classList.remove('hidden');
+  });
+});
+
+// Загрузка списка активных стримов
+async function loadActiveStreams() {
+  try {
+    const res = await fetch('/api/streams');
+    const data = await res.json();
+    const container = document.getElementById('activeStreams');
+    if (!container) return;
+    
+    container.innerHTML = data.items?.map(stream => `
+      <div class="stream-card" data-stream-id="${stream.id}">
+        <div class="stream-thumbnail">🔴 LIVE</div>
+        <div class="stream-meta">
+          <strong>${stream.title}</strong>
+          <span>👁️ ${stream.viewers || 0}</span>
+        </div>
+        <button class="btn btn-sm btn-watch" onclick="watchStream('${stream.id}')">Смотреть</button>
+      </div>
+    `).join('') || '<p class="text-secondary">Нет активных стримов</p>';
+  } catch (err) {
+    console.error('Ошибка загрузки стримов:', err);
+  }
+}
+loadActiveStreams();
+setInterval(loadActiveStreams, 30000); // Обновлять каждые 30 сек
 // ============================================
 // ПРОФИЛЬ
 // ============================================
