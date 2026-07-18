@@ -291,3 +291,29 @@ export async function handleGetSaved(request, env) {
   
   return json({ items: results || [] });
     }
+// === ДОБАВИТЬ В КОНЕЦ profile.js ===
+
+// Заглушки для совместимости (если index.js всё ещё импортирует их)
+export const handleGetMyProfile = async (request, env) => {
+  const user = await requireUser(request, env);
+  if (!user) return json({ error: 'unauthorized' }, 401);
+  return handleGetProfile(request, env, user.id);
+};
+
+export const handleGetUserProfile = handleGetProfile; // alias
+
+export const handleChangeUsername = async (request, env) => {
+  return json({ error: 'deprecated', message: 'Используйте PUT /api/profile' }, 410);
+};
+
+export const handleFollow = async (request, env, targetUserId) => {
+  return json({ error: 'not_implemented' }, 501);
+};
+
+export const handleGetFollowers = async (request, env, userId) => {
+  return json({ items: [] });
+};
+
+export const handleGetFollowing = async (request, env, userId) => {
+  return json({ items: [] });
+};
