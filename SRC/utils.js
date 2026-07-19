@@ -1,72 +1,61 @@
-// SRC/utils.js
-
-export const json = (data, status = 200, headers = {}) => {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...headers }
-  });
-};
-
-export const requireUser = async (request, env) => {
-  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  if (!token) return null;
-  
-  // Очистка просроченных сессий
-  await env.DB.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(Date.now()).run();
-  
-  const session = await env.DB.prepare(
-    'SELECT user_id FROM sessions WHERE token = ? AND expires_at > ?'
-  ).bind(token, Date.now()).first();
-  
-  if (!session) return null;
-  
-  return await env.DB.prepare(
-    'SELECT id, name, avatar_url FROM users WHERE id = ?'
-  ).bind(session.user_id).first();
-};
-
-// === БЕЗОПАСНОЕ ХЕШИРОВАНИЕ ПАРОЛЕЙ (Web Crypto API) ===
-export const hashPassword = async (password) => {
-  const encoder = new TextEncoder();
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']
-  );
-  const hash = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100000 },
-    keyMaterial, 256
-  );
-  const hashArray = Array.from(new Uint8Array(hash));
-  const saltArray = Array.from(salt);
-  return saltArray.map(b => b.toString(16).padStart(2, '0')).join('') + ':' + 
-         hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-};
-
-export const verifyPassword = async (password, storedHash) => {
-  const [saltHex, hashHex] = storedHash.split(':');
-  const salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-  const encoder = new TextEncoder();
-  
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']
-  );
-  const hash = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100000 },
-    keyMaterial, 256
-  );
-  const hashArray = Array.from(new Uint8Array(hash));
-  const computedHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  
-  return computedHex === hashHex;
-};
-
-// === CORS HEADERS ===
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Credentials': 'true',
+  'Access-Control-Max-Age': '86400'
 };
 
-export const handleOptions = () => {
-  return new Response(null, { status: 204, headers: corsHeaders });
-};
+export function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders }
+  });
+}
+
+export function handleOptions() {
+  return new Response(null, { headers: corsHeaders, status: 204 });
+}
+
+export function uuid() {
+  return crypto.randomUUID();
+}
+
+export function setSessionCookie(token) {
+  return `session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`;
+}
+
+function parseCookies(cookieHeader) {
+  if (!cookieHeader) return {};
+  const cookies = {};
+  cookieHeader.split(';').forEach(c => {
+    const [key, val] = c.trim().split('=');
+    if (key) cookies[key] = decodeURIComponent(val || '');
+  });
+  return cookies;
+}
+
+export async function getSessionToken(request) {
+  const cookies = parseCookies(request.headers.get('Cookie'));
+  return cookies.session || null;
+}
+
+export async function requireUser(request, env) {
+  try {
+    const token = await getSessionToken(request);
+    if (!token) return null;
+
+    const session = await env.DB.prepare(
+      'SELECT * FROM sessions WHERE token = ? AND expires_at > ?'
+    ).bind(token, Date.now()).first();
+
+    if (!session) return null;
+
+    return await env.DB.prepare(
+      'SELECT id, name, avatar_url, created_at FROM users WHERE id = ?'
+    ).bind(session.user_id).first();
+  } catch (err) {
+    console.warn('Session check failed:', err.message);
+    return null;
+  }
+}
