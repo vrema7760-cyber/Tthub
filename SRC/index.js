@@ -1,4 +1,3 @@
-// SRC/index.js
 import { handleUpload, handleFeed, handleMediaContent, handleDeleteMedia } from './media.js';
 import {
   handleGetMyProfile, 
@@ -24,17 +23,16 @@ export default {
     const path = url.pathname;
     const method = request.method;
 
-    // CORS preflight
     if (method === 'OPTIONS') return handleOptions();
 
-    // === HTML / FRONTEND ===
+    // Главная страница
     if (path === '/' || path === '/index.html') {
       return new Response(INDEX_HTML, {
         headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders }
       });
     }
 
-    // === GITHUB AUTH ===
+    // GitHub OAuth
     if (path === '/auth/github' && method === 'GET') {
       const redirectUri = url.origin + '/auth/github/callback';
       return githubLoginRedirect(env, redirectUri);
@@ -45,7 +43,7 @@ export default {
       return githubCallback(request, env, redirectUri);
     }
 
-    // === МЕДИА API ===
+    // Медиа API
     if (path === '/api/media/upload' && method === 'POST')
       return handleUpload(request, env);
 
@@ -63,7 +61,6 @@ export default {
       if (method === 'DELETE') return handleDeleteMedia(request, env, mediaId);
     }
 
-    // Лайки/сейвы
     const mediaLikeMatch = path.match(/^\/api\/media\/([^/]+)\/like$/);
     if (mediaLikeMatch && method === 'POST') {
       return handleLike(request, env, mediaLikeMatch[1]);
@@ -74,14 +71,13 @@ export default {
       return handleSave(request, env, mediaSaveMatch[1]);
     }
 
-    // === СТРИМЫ API ===
+    // Стримы API
     if (path === '/api/streams' && method === 'GET')
       return handleListStreams(request, env);
 
     if (path === '/api/streams' && method === 'POST')
       return handleCreateStream(request, env);
 
-    // Стримы по ID
     const streamEndMatch = path.match(/^\/api\/streams\/([^/]+)\/end$/);
     if (streamEndMatch && method === 'POST') {
       return handleEndStream(request, env, streamEndMatch[1]);
@@ -94,7 +90,7 @@ export default {
       if (method === 'DELETE') return handleDeleteStream(request, env, streamId);
     }
 
-    // === ПРОФИЛЬ API ===
+    // Профиль API
     if (path === '/api/profile' && method === 'GET') {
       const userId = url.searchParams.get('id');
       if (userId) {
@@ -112,7 +108,6 @@ export default {
       return handleFollow(request, env, userId);
     }
 
-    // === 404 ===
     return json({ error: 'not_found', path }, 404);
   }
 };
