@@ -1258,22 +1258,37 @@ $$('.nav-item[data-section]').forEach(btn => {
 // ============================================
 // АВТОРИЗАЦИЯ
 // ============================================
- // === 🔐 АВТОРИЗАЦИЯ (пуленепробиваемая версия) ===
+// === 🔐 АВТОРИЗАЦИЯ + ДИАГНОСТИКА (вставь вместо своих функций) ===
 
-// Простые хелперы
-function $(sel) { try { return document.querySelector(sel); } catch(e) { return null; } }
-function escapeHtml(text) {
+// Простой вывод сообщений на экран (для отладки с телефона)
+function showDebug(msg, type) {
   try {
-    if (!text) return '';
-    return String(text).replace(/[&<>"']/g, function(m) {
-      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
-    });
-  } catch(e) { return ''; }
+    var box = document.getElementById('auth-debug');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'auth-debug';
+      box.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1a1a2e;color:#0f0;padding:10px;font-size:12px;font-family:monospace;z-index:10000;max-height:150px;overflow:auto;border-top:1px solid #0f0;';
+      document.body.appendChild(box);
+    }
+    var time = new Date().toLocaleTimeString();
+    box.innerHTML = '[' + time + '] ' + (type||'info') + ': ' + msg + '<br>' + box.innerHTML;
+  } catch(e) {}
 }
 
-// Проверка авторизации — НИКОГДА не ломает сайт
+// Хелперы
+function $(sel) { try { return document.querySelector(sel); } catch(e) { return null; } }
+function escapeHtml(text) {
+  try { if (!text) return ''; return String(text).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); } 
+  catch(e) { return ''; }
+}
+
+// Главная функция проверки
 async function checkAuth() {
+  showDebug('🔍 checkAuth started', 'start');
+  
   try {
+    // 1. Пробуем получить профиль
+    showDebug('📡 Fetching /api/profile...', 'fetch');
     var res;
     try {
       res = await fetch('/api/profile', {
@@ -1281,122 +1296,55 @@ async function checkAuth() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include'
       });
+      showDebug('📡 Status: ' + res.status, 'status');
     } catch(fetchErr) {
-      console.log('Fetch error (ok):', fetchErr.message);
-      // Не авторизован, но сайт работает
+      showDebug('❌ Fetch failed: ' + fetchErr.message, 'error');
       state.user = null;
-      safeUpdateAuthUI();
-      safeLoadFeed();
+      updateAuthUI();
+      if (typeof loadFeed === 'function') loadFeed();
       return false;
     }
 
-    if (res && res.ok) {
+    // 2. Парсим ответ
+    if (res.ok) {
       try {
         var data = await res.json();
+        showDebug('📦 Response: ' + JSON.stringify(data).slice(0,100), 'data');
+        
         if (data && data.id && !data.error) {
+          showDebug('✅ Auth OK: user=' + (data.username||data.id), 'success');
           state.user = data;
-          safeUpdateAuthUI();
-          safeLoadFeed();
+          updateAuthUI();
+          // 🔥 Ключевое: ждём немного перед загрузкой ленты
+          setTimeout(function() {
+            if (typeof loadFeed === 'function') {
+              showDebug('🔄 Calling loadFeed()', 'feed');
+              loadFeed();
+            }
+          }, 300);
           return true;
+        } else {
+          showDebug('⚠️ No valid user: ' + (data?.error || 'empty'), 'warn');
         }
       } catch(parseErr) {
-        console.log('JSON parse error (ok):', parseErr.message);
+        showDebug('❌ JSON parse: ' + parseErr.message, 'error');
       }
-    }
-    
-    state.user = null;
-    safeUpdateAuthUI();
-    safeLoadFeed();
-    return false;
-    
-  } catch(e) {
-    // Глобальный catch — сайт продолжит работать
-    console.log('Auth guard caught:', e && e.message);
-    state.user = null;
-    safeUpdateAuthUI();
-    safeLoadFeed();
-    return false;
-  }
-}
-
-// Безопасное обновление UI — не упадёт, если кнопка не найдена
-function safeUpdateAuthUI() {
-  try {
-    var btn = $('#loginBtn');
-    if (!btn) return; // кнопки нет — ничего не делаем, но и не падаем
-
-    if (state.user && state.user.id) {
-      // ✅ Авторизован: аватар
-      var imgSrc = 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
-      if (state.user.avatar_url) imgSrc = state.user.avatar_url;
-      
-      // Очищаем кнопку безопасно
-      try { btn.innerHTML = ''; } catch(e) {}
-      
-      // Создаём аватар
-      var avatar = document.createElement('img');
-      avatar.src = escapeHtml(imgSrc);
-      avatar.alt = 'avatar';
-      avatar.style.width = '32px';
-      avatar.style.height = '32px';
-      avatar.style.borderRadius = '50%';
-      avatar.style.objectFit = 'cover';
-      
-      try { btn.appendChild(avatar); } catch(e) {}
-      
-      // Стили
-      btn.style.padding = '0';
-      btn.style.background = 'transparent';
-      btn.style.border = '2px solid #5865F2';
-      btn.style.borderRadius = '50%';
-      btn.style.cursor = 'pointer';
-      
-      // Клик — с защитой
-      btn.onclick = function(e) {
-        try {
-          if (e && e.preventDefault) e.preventDefault();
-          if (typeof switchSection === 'function') switchSection('profile');
-        } catch(err) { /* игнорируем */ }
-      };
-      
     } else {
-      // ❌ Не авторизован: кнопка входа
-      btn.textContent = '🔐 Войти';
-      btn.style.padding = '10px 16px';
-      btn.style.background = '#24292e';
-      btn.style.color = 'white';
-      btn.style.border = 'none';
-      btn.style.borderRadius = '8px';
-      btn.style.fontWeight = '600';
-      btn.style.cursor = 'pointer';
-      
-      // Клик — прямая ссылка, без JS-глюков
-      btn.onclick = function(e) {
-        try {
-          if (e && e.preventDefault) e.preventDefault();
-          window.location.href = '/auth/github';
-        } catch(err) { /* игнорируем */ }
-      };
+      showDebug('⚠️ HTTP ' + res.status, 'warn');
     }
+    
+    // Не авторизован
+    showDebug('👤 Not authenticated', 'info');
+    state.user = null;
+    updateAuthUI();
+    if (typeof loadFeed === 'function') loadFeed();
+    return false;
+    
   } catch(e) {
-    // Если UI сломался — просто молча выходим
-    console.log('UI update error (ignored):', e && e.message);
-  }
-}
-
-// Безопасный запуск ленты — не упадёт, если функция не готова
-function safeLoadFeed() {
-  try {
-    if (typeof loadFeed === 'function') {
-      loadFeed();
-    }
-  } catch(e) {
-    console.log('Feed load error (ignored):', e && e.message);
-  }
-}
-
-// 🚀 Инициализация (добавь это в свой DOMContentLoaded или init):
-// setTimeout(checkAuth, 200);
+    showDebug('💥 Global error: ' + (e.message||e), 'error');
+    state.user = null;
+    updateAuthUI();
+    if (typeof loadFeed === 'function') loadFeed
 // ============================================
 // ЛЕНТА
 // ============================================
