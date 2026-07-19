@@ -1258,98 +1258,145 @@ $$('.nav-item[data-section]').forEach(btn => {
 // ============================================
 // АВТОРИЗАЦИЯ
 // ============================================
-// === 🔐 АВТОРИЗАЦИЯ (без шаблонных строк — работает везде) ===
+ // === 🔐 АВТОРИЗАЦИЯ (пуленепробиваемая версия) ===
 
-// Хелперы (если их нет)
-function $(sel) { return document.querySelector(sel); }
+// Простые хелперы
+function $(sel) { try { return document.querySelector(sel); } catch(e) { return null; } }
 function escapeHtml(text) {
-  if (!text) return '';
-  return String(text).replace(/[&<>"']/g, function(m) {
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
-  });
+  try {
+    if (!text) return '';
+    return String(text).replace(/[&<>"']/g, function(m) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+    });
+  } catch(e) { return ''; }
 }
 
-// Проверка сессии
+// Проверка авторизации — НИКОГДА не ломает сайт
 async function checkAuth() {
   try {
-    var res = await fetch('/api/profile', {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include'
-    });
+    var res;
+    try {
+      res = await fetch('/api/profile', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+    } catch(fetchErr) {
+      console.log('Fetch error (ok):', fetchErr.message);
+      // Не авторизован, но сайт работает
+      state.user = null;
+      safeUpdateAuthUI();
+      safeLoadFeed();
+      return false;
+    }
 
-    if (res.ok) {
-      var data = await res.json();
-      if (data && data.id && !data.error) {
-        state.user = data;
-        updateAuthUI();
-        return true;
+    if (res && res.ok) {
+      try {
+        var data = await res.json();
+        if (data && data.id && !data.error) {
+          state.user = data;
+          safeUpdateAuthUI();
+          safeLoadFeed();
+          return true;
+        }
+      } catch(parseErr) {
+        console.log('JSON parse error (ok):', parseErr.message);
       }
     }
+    
     state.user = null;
-    updateAuthUI();
+    safeUpdateAuthUI();
+    safeLoadFeed();
     return false;
-  } catch (e) {
-    console.warn('Auth check failed:', e);
+    
+  } catch(e) {
+    // Глобальный catch — сайт продолжит работать
+    console.log('Auth guard caught:', e && e.message);
     state.user = null;
-    updateAuthUI();
+    safeUpdateAuthUI();
+    safeLoadFeed();
     return false;
-  } finally {
-    if (typeof loadFeed === 'function') loadFeed();
   }
 }
 
-// Обновление UI кнопки
-function updateAuthUI() {
-  var btn = $('#loginBtn');
-  if (!btn) return;
+// Безопасное обновление UI — не упадёт, если кнопка не найдена
+function safeUpdateAuthUI() {
+  try {
+    var btn = $('#loginBtn');
+    if (!btn) return; // кнопки нет — ничего не делаем, но и не падаем
 
-  if (state.user && state.user.id) {
-    // ✅ Авторизован: аватар
-    var img = state.user.avatar_url || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
-    
-    // Создаём img элемент через DOM (надёжнее, чем innerHTML)
-    var avatar = document.createElement('img');
-    avatar.src = escapeHtml(img);
-    avatar.alt = 'avatar';
-    avatar.style.width = '32px';
-    avatar.style.height = '32px';
-    avatar.style.borderRadius = '50%';
-    avatar.style.objectFit = 'cover';
-    
-    btn.innerHTML = '';
-    btn.appendChild(avatar);
-    btn.style.padding = '0';
-    btn.style.background = 'transparent';
-    btn.style.border = '2px solid #5865F2';
-    btn.style.borderRadius = '50%';
-    btn.style.cursor = 'pointer';
-    btn.title = 'Профиль: ' + (state.user.username || '');
-    
-    btn.onclick = function(e) { 
-      e.preventDefault(); 
-      if (typeof switchSection === 'function') switchSection('profile'); 
-    };
-    
-  } else {
-    // ❌ Не авторизован: кнопка входа
-    btn.textContent = '🔐 Войти через GitHub';
-    btn.style.padding = '10px 16px';
-    btn.style.background = '#24292e';
-    btn.style.color = 'white';
-    btn.style.border = 'none';
-    btn.style.borderRadius = '8px';
-    btn.style.fontWeight = '600';
-    btn.style.cursor = 'pointer';
-    btn.title = 'Авторизоваться';
-    
-    btn.onclick = null;
-    btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      window.location.href = '/auth/github';
-    }, { once: true });
+    if (state.user && state.user.id) {
+      // ✅ Авторизован: аватар
+      var imgSrc = 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+      if (state.user.avatar_url) imgSrc = state.user.avatar_url;
+      
+      // Очищаем кнопку безопасно
+      try { btn.innerHTML = ''; } catch(e) {}
+      
+      // Создаём аватар
+      var avatar = document.createElement('img');
+      avatar.src = escapeHtml(imgSrc);
+      avatar.alt = 'avatar';
+      avatar.style.width = '32px';
+      avatar.style.height = '32px';
+      avatar.style.borderRadius = '50%';
+      avatar.style.objectFit = 'cover';
+      
+      try { btn.appendChild(avatar); } catch(e) {}
+      
+      // Стили
+      btn.style.padding = '0';
+      btn.style.background = 'transparent';
+      btn.style.border = '2px solid #5865F2';
+      btn.style.borderRadius = '50%';
+      btn.style.cursor = 'pointer';
+      
+      // Клик — с защитой
+      btn.onclick = function(e) {
+        try {
+          if (e && e.preventDefault) e.preventDefault();
+          if (typeof switchSection === 'function') switchSection('profile');
+        } catch(err) { /* игнорируем */ }
+      };
+      
+    } else {
+      // ❌ Не авторизован: кнопка входа
+      btn.textContent = '🔐 Войти';
+      btn.style.padding = '10px 16px';
+      btn.style.background = '#24292e';
+      btn.style.color = 'white';
+      btn.style.border = 'none';
+      btn.style.borderRadius = '8px';
+      btn.style.fontWeight = '600';
+      btn.style.cursor = 'pointer';
+      
+      // Клик — прямая ссылка, без JS-глюков
+      btn.onclick = function(e) {
+        try {
+          if (e && e.preventDefault) e.preventDefault();
+          window.location.href = '/auth/github';
+        } catch(err) { /* игнорируем */ }
+      };
+    }
+  } catch(e) {
+    // Если UI сломался — просто молча выходим
+    console.log('UI update error (ignored):', e && e.message);
   }
 }
+
+// Безопасный запуск ленты — не упадёт, если функция не готова
+function safeLoadFeed() {
+  try {
+    if (typeof loadFeed === 'function') {
+      loadFeed();
+    }
+  } catch(e) {
+    console.log('Feed load error (ignored):', e && e.message);
+  }
+}
+
+// 🚀 Инициализация (добавь это в свой DOMContentLoaded или init):
+// setTimeout(checkAuth, 200);
 // ============================================
 // ЛЕНТА
 // ============================================
