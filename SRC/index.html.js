@@ -1258,76 +1258,73 @@ $$('.nav-item[data-section]').forEach(btn => {
 // ============================================
 // АВТОРИЗАЦИЯ
 // ============================================
-// Проверка авторизации — работает с куки, а не localStorage
+// === 🔐 АВТОРИЗАЦИЯ (полный блок, вставь вместо своих функций) ===
+
+// Хелперы (если их нет в твоём коде)
+function $(sel) { return document.querySelector(sel); }
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// Проверка сессии через куки + бэкенд
 async function checkAuth() {
   try {
-    // Пытаемся получить профиль — если куки session есть, бэкенд вернёт данные
-    const response = await fetch('/api/profile', {
+    const res = await fetch('/api/profile', {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include' // 🔥 Обязательно: отправлять куки с запросом
+      credentials: 'include' // 🔥 обязательно: отправляет куку session на сервер
     });
-    
-    if (response.ok) {
-      const profile = await response.json();
-      if (profile && profile.id && !profile.error) {
-        state.user = profile;
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.id && !data.error) {
+        state.user = data; // сохраняем в твоё глобальное состояние
         updateAuthUI();
-        return;
+        return true;
       }
     }
-    // Если не авторизован — очищаем состояние
     state.user = null;
     updateAuthUI();
+    return false;
   } catch (e) {
     console.warn('Auth check failed:', e);
     state.user = null;
     updateAuthUI();
+    return false;
   } finally {
-    // Загружаем ленту в любом случае
-    loadFeed();
+    if (typeof loadFeed === 'function') loadFeed();
   }
 }
 
-// Обновление интерфейса авторизации
+// Обновление кнопки входа / аватара
 function updateAuthUI() {
-  const loginBtn = $('#loginBtn');
-  if (!loginBtn) return; // Если кнопки нет — выходим
-  
-  if (state.user) {
-    // Пользователь авторизован: показываем аватар
-    const avatarUrl = state.user.avatar_url || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
-    loginBtn.innerHTML = '<img src="' + escapeHtml(avatarUrl) + '" alt="avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">';
-    loginBtn.style.padding = '0';
-    loginBtn.style.background = 'transparent';
-    loginBtn.style.border = '2px solid #5865F2';
-    loginBtn.onclick = (e) => { 
-      e.preventDefault(); 
-      switchSection('profile'); 
-    };
-    loginBtn.title = 'Открыть профиль';
+  const btn = $('#loginBtn');
+  if (!btn) return; // если кнопки нет — выходим
+
+  if (state.user && state.user.id) {
+    // ✅ Вошли: аватар + переход в профиль
+    const img = state.user.avatar_url || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+    btn.innerHTML = `<img src="${escapeHtml(img)}" alt="avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`;
+    btn.style.cssText = 'padding:0;background:transparent;border:2px solid #5865F2;border-radius:50%;cursor:pointer;';
+    btn.title = `Профиль: ${state.user.username || ''}`;
+    btn.onclick = (e) => { e.preventDefault(); switchSection('profile'); };
   } else {
-    // НЕ авторизован: показываем кнопку входа как ССЫЛКУ
-    loginBtn.innerHTML = '🔐 Войти через GitHub';
-    loginBtn.style.padding = '12px 20px';
-    loginBtn.style.background = '#24292e';
-    loginBtn.style.color = 'white';
-    loginBtn.style.border = 'none';
-    loginBtn.style.borderRadius = '10px';
-    loginBtn.style.fontSize = '14px';
-    loginBtn.style.fontWeight = '600';
-    loginBtn.style.cursor = 'pointer';
-    loginBtn.title = 'Авторизоваться через GitHub';
-    
-    // 🔥 Ключевое: делаем это ссылкой, а не кнопкой с JS
-    loginBtn.onclick = null; // Убираем старый обработчик
-    loginBtn.addEventListener('click', (e) => {
+    // ❌ Не вошли: кнопка входа
+    btn.innerHTML = '🔐 Войти через GitHub';
+    btn.style.cssText = 'padding:10px 16px;background:#24292e;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;';
+    btn.title = 'Авторизоваться';
+    btn.onclick = null;
+    btn.addEventListener('click', (e) => {
       e.preventDefault();
-      // Прямой редирект на OAuth — работает даже если JS глючит
       window.location.href = '/auth/github';
-    }, { once: true }); // once: true — чтобы не дублировать обработчики
+    }, { once: true });
   }
-}// ============================================
+}
+
+// 🚀 ЗАПУСК (добавь эту строку в свой код инициализации, например в DOMContentLoaded):
+// document.addEventListener('DOMContentLoaded', () => setTimeout(checkAuth, 150));
+// ============================================
 // ЛЕНТА
 // ============================================
 async function loadFeed(force = false) {
