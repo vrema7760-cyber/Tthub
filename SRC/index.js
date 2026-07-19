@@ -1,10 +1,20 @@
 // SRC/index.js
 import { handleUpload, handleFeed, handleMediaContent, handleDeleteMedia } from './media.js';
-import { 
-  handleGetProfile, handleUpdateProfile, handleRegister, handleLogin, handleLogout,
-  handleListStreams, handleCreateStream, handleEndStream, handleDeleteStream, handleGetStream,
-  handleLike, handleSave, handleGetSaved 
+import {
+  handleGetMyProfile, 
+  handleGetUserProfile, 
+  handleUpdateProfile, 
+  handleListStreams, 
+  handleCreateStream, 
+  handleEndStream, 
+  handleDeleteStream,
+  handleGetStream,
+  handleLike, 
+  handleSave, 
+  handleGetSaved, 
+  handleFollow
 } from './profile.js';
+import { githubLoginRedirect, githubCallback } from './auth.js';
 import { json, corsHeaders, handleOptions } from './utils.js';
 import INDEX_HTML from './index.html.js';
 
@@ -19,77 +29,88 @@ export default {
 
     // === HTML / FRONTEND ===
     if (path === '/' || path === '/index.html') {
-      return new Response(INDEX_HTML, { 
-        headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders } 
+      return new Response(INDEX_HTML, {
+        headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders }
       });
     }
 
+    // === GITHUB AUTH ===
+    if (path === '/auth/github' && method === 'GET') {
+      const redirectUri = url.origin + '/auth/github/callback';
+      return githubLoginRedirect(env, redirectUri);
+    }
+    
+    if (path === '/auth/github/callback' && method === 'GET') {
+      const redirectUri = url.origin + '/auth/github/callback';
+      return githubCallback(request, env, redirectUri);
+    }
+
     // === МЕДИА API ===
-    if (path === '/api/media/upload' && method === 'POST') 
+    if (path === '/api/media/upload' && method === 'POST')
       return handleUpload(request, env);
-    
-    if (path === '/api/media/feed' && method === 'GET') 
+
+    if (path === '/api/media/feed' && method === 'GET')
       return handleFeed(request, env);
-    
-    if (path.match(/^\/api\/media\/[^/]+\/like$/) && method === 'POST') {
-      const mediaId = path.split('/')[3];
-      return handleLike(request, env, mediaId);
+
+    if (path === '/api/media/saved' && method === 'GET')
+      return handleGetSaved(request, env);
+
+    // Медиа по ID
+    const mediaIdMatch = path.match(/^\/api\/media\/([^/]+)$/);
+    if (mediaIdMatch) {
+      const mediaId = mediaIdMatch[1];
+      if (method === 'GET') return handleMediaContent(request, env, mediaId);
+      if (method === 'DELETE') return handleDeleteMedia(request, env, mediaId);
     }
-    
-    if (path.match(/^\/api\/media\/[^/]+\/save$/) && method === 'POST') {
-      const mediaId = path.split('/')[3];
-      return handleSave(request, env, mediaId);
+
+    // Лайки/сейвы
+    const mediaLikeMatch = path.match(/^\/api\/media\/([^/]+)\/like$/);
+    if (mediaLikeMatch && method === 'POST') {
+      return handleLike(request, env, mediaLikeMatch[1]);
     }
-    
-    if (path.match(/^\/api\/media\/[^/]+$/) && method === 'GET') {
-      const mediaId = path.split('/')[3];
-      return handleMediaContent(request, env, mediaId);
-    }
-    
-    if (path.match(/^\/api\/media\/[^/]+$/) && method === 'DELETE') {
-      const mediaId = path.split('/')[3];
-      return handleDeleteMedia(request, env, mediaId);
+
+    const mediaSaveMatch = path.match(/^\/api\/media\/([^/]+)\/save$/);
+    if (mediaSaveMatch && method === 'POST') {
+      return handleSave(request, env, mediaSaveMatch[1]);
     }
 
     // === СТРИМЫ API ===
-    if (path === '/api/streams' && method === 'GET') 
+    if (path === '/api/streams' && method === 'GET')
       return handleListStreams(request, env);
-    
-    if (path === '/api/streams' && method === 'POST') 
+
+    if (path === '/api/streams' && method === 'POST')
       return handleCreateStream(request, env);
-    
-    if (path.match(/^\/api\/streams\/[^/]+\/end$/) && method === 'POST') {
-      const streamId = path.split('/')[3];
-      return handleEndStream(request, env, streamId);
+
+    // Стримы по ID
+    const streamEndMatch = path.match(/^\/api\/streams\/([^/]+)\/end$/);
+    if (streamEndMatch && method === 'POST') {
+      return handleEndStream(request, env, streamEndMatch[1]);
     }
-    
-    if (path.match(/^\/api\/streams\/[^/]+$/) && !path.includes('/end')) {
-      const streamId = path.split('/')[3];
+
+    const streamIdMatch = path.match(/^\/api\/streams\/([^/]+)$/);
+    if (streamIdMatch) {
+      const streamId = streamIdMatch[1];
       if (method === 'GET') return handleGetStream(request, env, streamId);
       if (method === 'DELETE') return handleDeleteStream(request, env, streamId);
     }
 
-    // === ПРОФИЛЬ / АВТОРИЗАЦИЯ ===
-    if (path === '/api/auth/register' && method === 'POST') 
-      return handleRegister(request, env);
-    
-    if (path === '/api/auth/login' && method === 'POST') 
-      return handleLogin(request, env);
-    
-    if (path === '/api/auth/logout' && method === 'POST') 
-      return handleLogout(request, env);
-    
+    // === ПРОФИЛЬ API ===
     if (path === '/api/profile' && method === 'GET') {
       const userId = url.searchParams.get('id');
-      if (!userId) return json({ error: 'missing_id' }, 400);
-      return handleGetProfile(request, env, userId);
+      if (userId) {
+        return handleGetUserProfile(request, env, userId);
+      }
+      return handleGetMyProfile(request, env);
     }
-    
-    if (path === '/api/profile' && method === 'PUT') 
+
+    if (path === '/api/profile' && method === 'PUT')
       return handleUpdateProfile(request, env);
-    
-    if (path === '/api/profile/saved' && method === 'GET') 
-      return handleGetSaved(request, env);
+
+    if (path === '/api/profile/follow' && method === 'POST') {
+      const userId = url.searchParams.get('user_id');
+      if (!userId) return json({ error: 'missing_user_id' }, 400);
+      return handleFollow(request, env, userId);
+    }
 
     // === 404 ===
     return json({ error: 'not_found', path }, 404);
