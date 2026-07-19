@@ -1,4 +1,3 @@
-// SRC/profile.js
 import { json, requireUser } from './utils.js';
 
 function convertToEmbedUrl(url) {
@@ -17,7 +16,6 @@ function convertToEmbedUrl(url) {
   return url;
 }
 
-// === ПРОФИЛИ ===
 export async function handleGetMyProfile(request, env) {
   try {
     const user = await requireUser(request, env);
@@ -36,19 +34,14 @@ export async function handleGetMyProfile(request, env) {
     const fgc = await env.DB.prepare('SELECT COUNT(*) as c FROM follows WHERE follower_id = ?').bind(user.id).first();
     
     return json({
-      user_id: user.id, 
-      username: user.name,
-      display_name: profile?.display_name || user.name, 
-      bio: profile?.bio || '',
+      user_id: user.id, username: user.name,
+      display_name: profile?.display_name || user.name, bio: profile?.bio || '',
       avatar_url: profile?.avatar_url || user.avatar_url,
       profile_emoji: profile?.profile_emoji || '',
       bg_color: profile?.bg_color || '#1a1a2e',
       bg_image_url: profile?.bg_image_url || '',
-      media_count: mc?.c || 0, 
-      followers_count: fc?.c || 0, 
-      following_count: fgc?.c || 0,
-      is_me: true, 
-      created_at: user.created_at
+      media_count: mc?.c || 0, followers_count: fc?.c || 0, following_count: fgc?.c || 0,
+      is_me: true, created_at: user.created_at
     });
   } catch (err) {
     console.error('Get my profile error:', err);
@@ -76,20 +69,14 @@ export async function handleGetUserProfile(request, env, userId) {
     }
     
     return json({
-      user_id: user.id, 
-      username: user.name,
-      display_name: profile.display_name || user.name, 
-      bio: profile.bio || '',
+      user_id: user.id, username: user.name,
+      display_name: profile.display_name || user.name, bio: profile.bio || '',
       avatar_url: profile.avatar_url || user.avatar_url,
       profile_emoji: profile.profile_emoji || '👻',
       bg_color: profile.bg_color || '#1a1a2e',
       bg_image_url: profile.bg_image_url,
-      media_count: mc?.c || 0, 
-      followers_count: fc?.c || 0, 
-      following_count: fgc?.c || 0,
-      is_me: cu && cu.id === userId, 
-      is_following, 
-      created_at: user.created_at
+      media_count: mc?.c || 0, followers_count: fc?.c || 0, following_count: fgc?.c || 0,
+      is_me: cu && cu.id === userId, is_following, created_at: user.created_at
     });
   } catch (err) {
     console.error('Get user profile error:', err);
@@ -105,42 +92,27 @@ export async function handleUpdateProfile(request, env) {
     const body = await request.json();
     const { display_name, bio, avatar_url, profile_emoji, bg_color, bg_image_url } = body;
     
-    const updates = []; 
-    const binds = [];
+    const updates = []; const binds = [];
     
     if (display_name !== undefined) { 
       if (display_name.length > 50) return json({ error: 'too_long' }, 400); 
-      updates.push('display_name = ?'); 
-      binds.push(display_name); 
+      updates.push('display_name = ?'); binds.push(display_name); 
     }
     if (bio !== undefined) { 
       if (bio.length > 500) return json({ error: 'too_long' }, 400); 
-      updates.push('bio = ?'); 
-      binds.push(bio); 
+      updates.push('bio = ?'); binds.push(bio); 
     }
-    if (avatar_url !== undefined) { 
-      updates.push('avatar_url = ?'); 
-      binds.push(avatar_url); 
-    }
-    if (profile_emoji !== undefined) { 
-      updates.push('profile_emoji = ?'); 
-      binds.push(profile_emoji || '👻'); 
-    }
+    if (avatar_url !== undefined) { updates.push('avatar_url = ?'); binds.push(avatar_url); }
+    if (profile_emoji !== undefined) { updates.push('profile_emoji = ?'); binds.push(profile_emoji || ''); }
     if (bg_color !== undefined) { 
       const c = (bg_color && /^#[0-9A-Fa-f]{6}$/.test(bg_color)) ? bg_color : '#1a1a2e'; 
-      updates.push('bg_color = ?'); 
-      binds.push(c); 
+      updates.push('bg_color = ?'); binds.push(c); 
     }
-    if (bg_image_url !== undefined) { 
-      updates.push('bg_image_url = ?'); 
-      binds.push(bg_image_url); 
-    }
+    if (bg_image_url !== undefined) { updates.push('bg_image_url = ?'); binds.push(bg_image_url); }
     
     if (updates.length === 0) return json({ error: 'no_changes' }, 400);
     
-    updates.push('updated_at = ?'); 
-    binds.push(Date.now()); 
-    binds.push(user.id);
+    updates.push('updated_at = ?'); binds.push(Date.now()); binds.push(user.id);
     
     const existing = await env.DB.prepare('SELECT * FROM user_profiles WHERE user_id = ?').bind(user.id).first();
     if (existing) {
@@ -157,7 +129,6 @@ export async function handleUpdateProfile(request, env) {
   }
 }
 
-// === СТРИМЫ ===
 export async function handleListStreams(request, env) {
   try {
     const url = new URL(request.url);
@@ -262,7 +233,6 @@ export async function handleDeleteStream(request, env, streamId) {
   }
 }
 
-// === ЛАЙКИ/СЕЙВЫ/ПОДПИСКИ ===
 export async function handleLike(request, env, mediaId) {
   try {
     const user = await requireUser(request, env);
@@ -355,4 +325,4 @@ export async function handleFollow(request, env, userId) {
     console.error('Follow error:', err);
     return json({ error: 'follow_failed' }, 500);
   }
-      }
+             }
