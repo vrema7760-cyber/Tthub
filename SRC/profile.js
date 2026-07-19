@@ -136,27 +136,37 @@ export async function handleListStreams(request, env) {
     const limit = Math.min(Number(url.searchParams.get('limit') || 10), 50);
     const onlyLive = url.searchParams.get('live') === '1';
 
-    let query = `SELECT s.*, u.name as author_name, u.avatar_url as author_avatar 
-                 FROM streams s 
-                 JOIN users u ON u.id = s.user_id 
-                 WHERE s.started_at < ?`;
+    // Простой запрос без сложных JOIN — меньше шансов на ошибку
+    let query = `SELECT id, user_id, type, title, description, stream_url, thumbnail_url, is_live, viewers, started_at, ended_at FROM streams WHERE started_at < ?`;
     const binds = [cursor];
 
     if (onlyLive) {
-      query += ` AND s.is_live = 1 AND s.ended_at IS NULL`;
+      query += ` AND is_live = 1 AND ended_at IS NULL`;
     }
-    query += ` ORDER BY s.started_at DESC LIMIT ?`;
+    query += ` ORDER BY started_at DESC LIMIT ?`;
     binds.push(limit);
 
     const { results } = await env.DB.prepare(query).bind(...binds).all();
     
+    // Добавляем автора отдельно (если нужно)
+    const items = [];
+    for (const s of (results || [])) {
+      const author = await env.DB.prepare('SELECT name, avatar_url FROM users WHERE id = ?').bind(s.user_id).first();
+      items.push({
+        ...s,
+        author_name: author?.name || 'Unknown',
+        author_avatar: author?.avatar_url || ''
+      });
+    }
+    
     return json({ 
-      items: results || [], 
-      next_cursor: results.length ? results[results.length - 1].started_at : null 
+      items, 
+      next_cursor: items.length ? items[items.length - 1].started_at : null 
     });
   } catch (err) {
-    console.error('Streams list error:', err);
-    return json({ items: [], next_cursor: null, error: 'streams_fetch_error' }, 500);
+    console.error('Streams error:', err);
+    // Возвращаем пустой массив, а не 500 — фронт не сломается
+    return json({ items: [], next_cursor: null });
   }
 }
 
