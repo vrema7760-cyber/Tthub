@@ -1258,28 +1258,30 @@ $$('.nav-item[data-section]').forEach(btn => {
 // ============================================
 // АВТОРИЗАЦИЯ
 // ============================================
-// === 🔐 АВТОРИЗАЦИЯ (полный блок, вставь вместо своих функций) ===
+// === 🔐 АВТОРИЗАЦИЯ (без шаблонных строк — работает везде) ===
 
-// Хелперы (если их нет в твоём коде)
+// Хелперы (если их нет)
 function $(sel) { return document.querySelector(sel); }
 function escapeHtml(text) {
   if (!text) return '';
-  return String(text).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  return String(text).replace(/[&<>"']/g, function(m) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+  });
 }
 
-// Проверка сессии через куки + бэкенд
+// Проверка сессии
 async function checkAuth() {
   try {
-    const res = await fetch('/api/profile', {
+    var res = await fetch('/api/profile', {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include' // 🔥 обязательно: отправляет куку session на сервер
+      credentials: 'include'
     });
 
     if (res.ok) {
-      const data = await res.json();
+      var data = await res.json();
       if (data && data.id && !data.error) {
-        state.user = data; // сохраняем в твоё глобальное состояние
+        state.user = data;
         updateAuthUI();
         return true;
       }
@@ -1297,33 +1299,57 @@ async function checkAuth() {
   }
 }
 
-// Обновление кнопки входа / аватара
+// Обновление UI кнопки
 function updateAuthUI() {
-  const btn = $('#loginBtn');
-  if (!btn) return; // если кнопки нет — выходим
+  var btn = $('#loginBtn');
+  if (!btn) return;
 
   if (state.user && state.user.id) {
-    // ✅ Вошли: аватар + переход в профиль
-    const img = state.user.avatar_url || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
-    btn.innerHTML = `<img src="${escapeHtml(img)}" alt="avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`;
-    btn.style.cssText = 'padding:0;background:transparent;border:2px solid #5865F2;border-radius:50%;cursor:pointer;';
-    btn.title = `Профиль: ${state.user.username || ''}`;
-    btn.onclick = (e) => { e.preventDefault(); switchSection('profile'); };
+    // ✅ Авторизован: аватар
+    var img = state.user.avatar_url || 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+    
+    // Создаём img элемент через DOM (надёжнее, чем innerHTML)
+    var avatar = document.createElement('img');
+    avatar.src = escapeHtml(img);
+    avatar.alt = 'avatar';
+    avatar.style.width = '32px';
+    avatar.style.height = '32px';
+    avatar.style.borderRadius = '50%';
+    avatar.style.objectFit = 'cover';
+    
+    btn.innerHTML = '';
+    btn.appendChild(avatar);
+    btn.style.padding = '0';
+    btn.style.background = 'transparent';
+    btn.style.border = '2px solid #5865F2';
+    btn.style.borderRadius = '50%';
+    btn.style.cursor = 'pointer';
+    btn.title = 'Профиль: ' + (state.user.username || '');
+    
+    btn.onclick = function(e) { 
+      e.preventDefault(); 
+      if (typeof switchSection === 'function') switchSection('profile'); 
+    };
+    
   } else {
-    // ❌ Не вошли: кнопка входа
-    btn.innerHTML = '🔐 Войти через GitHub';
-    btn.style.cssText = 'padding:10px 16px;background:#24292e;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;';
+    // ❌ Не авторизован: кнопка входа
+    btn.textContent = '🔐 Войти через GitHub';
+    btn.style.padding = '10px 16px';
+    btn.style.background = '#24292e';
+    btn.style.color = 'white';
+    btn.style.border = 'none';
+    btn.style.borderRadius = '8px';
+    btn.style.fontWeight = '600';
+    btn.style.cursor = 'pointer';
     btn.title = 'Авторизоваться';
+    
     btn.onclick = null;
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', function(e) {
       e.preventDefault();
       window.location.href = '/auth/github';
     }, { once: true });
   }
 }
-
-// 🚀 ЗАПУСК (добавь эту строку в свой код инициализации, например в DOMContentLoaded):
-// document.addEventListener('DOMContentLoaded', () => setTimeout(checkAuth, 150));
 // ============================================
 // ЛЕНТА
 // ============================================
